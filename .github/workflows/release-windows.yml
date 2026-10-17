@@ -32,6 +32,9 @@ concurrency:
   group: release-windows-${{ inputs.version }}
   cancel-in-progress: false
 
+env:
+  GH_REPO: ${{ github.repository }}
+
 jobs:
   build:
     runs-on: windows-latest

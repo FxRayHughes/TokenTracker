@@ -22,6 +22,9 @@ concurrency:
   group: release-${{ inputs.version }}
   cancel-in-progress: false
 
+env:
+  GH_REPO: ${{ github.repository }}
+
 jobs:
   # Create the vX.Y.Z release as a DRAFT first, so the macOS and Windows build
   # jobs can upload their assets to it IN PARALLEL while it stays invisible.

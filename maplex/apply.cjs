@@ -120,7 +120,7 @@ function walk(dir) {
   const p = path.join(root, dir);
   if (!fs.existsSync(p)) return;
   for (const e of fs.readdirSync(p, { withFileTypes: true })) {
-    const rel = path.join(dir, e.name);
+    const rel = path.posix.join(dir.split(path.sep).join('/'), e.name);
     if (e.isDirectory()) {
       if (["node_modules", "__tests__", "tests", "test", "dist", "bin", "obj", "target", "publish"].includes(e.name) && dir !== ".") {
         if (!(rel === "bin")) continue;
