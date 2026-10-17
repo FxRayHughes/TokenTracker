@@ -1,0 +1,83 @@
+name: follow upstream releases
+
+# Upstream (xiufengsun/TokenTracker) is never pulled automatically into
+# clients: this job only notices a new upstream release and rebuilds it with
+# the maplex overlay. Every published asset therefore comes from this repo,
+# and clients only ever update from this repo's releases.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Specific upstream version to build (e.g. 1.4.3). Empty = upstream latest."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: follow-upstream
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find upstream release not yet built here
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WANT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${WANT:-}" ]; then
+            tag="v${WANT#v}"
+          else
+            tag=$(gh api repos/xiufengsun/TokenTracker/releases/latest --jq .tag_name)
+          fi
+          version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected upstream tag: $tag"; exit 1
+          fi
+          state=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq 'if .isDraft then "draft" else "published" end' 2>/dev/null || echo missing)
+          echo "upstream=$tag local=$state"
+          if [ "$state" = "published" ]; then
+            echo "Already released $tag — nothing to do."; exit 0
+          fi
+          if [ "$state" = "draft" ] && [ -z "${WANT:-}" ]; then
+            echo "::warning::Draft $tag exists (previous build failed or still running). Re-run manually with version=$version."
+            exit 0
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Dry-run overlay against the upstream tag
+        if: steps.find.outputs.version != ''
+        uses: actions/checkout@v7
+        with:
+          repository: xiufengsun/TokenTracker
+          ref: refs/tags/v${{ steps.find.outputs.version }}
+          path: upstream
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        if: steps.find.outputs.version != ''
+        with:
+          path: overlay
+          persist-credentials: false
+
+      - name: Apply overlay (fails loudly if upstream moved an anchor)
+        if: steps.find.outputs.version != ''
+        run: node overlay/maplex/apply.cjs upstream
+
+      - name: Dispatch release build
+        if: steps.find.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.find.outputs.version }}
+        run: |
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "${{ github.ref_name }}" \
+            -f version="$VERSION" -f publish=true
+          echo "Dispatched release.yml for v$VERSION" >> "$GITHUB_STEP_SUMMARY"
