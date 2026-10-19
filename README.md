@@ -42,6 +42,20 @@ Values live in `maplex/config.json`.
 
 Manual build of one version: Actions → *follow upstream releases* → Run workflow → `version=1.4.3`.
 
+### maplex sub-releases (client-only fixes between upstream versions)
+
+When the overlay changes but upstream has not released, publish **`vX.Y.Z.N`** on top of upstream `vX.Y.Z`:
+
+```sh
+gh workflow run release.yml --repo FxRayHughes/TokenTracker --ref maplex -f version=1.4.5.1
+```
+
+- Only the versions the updaters compare get the 4th part: macOS `MARKETING_VERSION`, Windows `<Version>`, and the dashboard's displayed version. npm and Linux keep `X.Y.Z` because those only accept semver.
+- `1.4.5` < `1.4.5.1` < `1.4.6`. Installed apps update to the sub-release, and upstream's next version still updates everyone normally.
+- *follow upstream* only watches upstream tags (`vX.Y.Z`), so sub-releases never block it.
+- Never rebuild an already published version: clients never re-download the same version number.
+- `maplex/verify-versions.cjs` enforces this split.
+
 If the overlay fails after an upstream change, fix the anchor in `maplex/apply.cjs`, push, and re-run.
 
 ## Server dashboard

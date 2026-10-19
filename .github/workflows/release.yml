@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g. 0.5.25)"
+        description: "Version to release: upstream X.Y.Z, or a maplex sub-release X.Y.Z.N built on upstream X.Y.Z"
         required: true
         type: string
       no_cache:
@@ -37,11 +37,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      upstream: ${{ steps.ver.outputs.upstream }}
     steps:
+      - name: Resolve upstream version
+        id: ver
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[1-9][0-9]*)?$ ]]; then
+            echo "::error::Invalid release version: $VERSION"; exit 1
+          fi
+          echo "upstream=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v7
         with:
           repository: xiufengsun/TokenTracker
-          ref: refs/tags/v${{ inputs.version }}
+          ref: refs/tags/v${{ steps.ver.outputs.upstream }}
           persist-credentials: false
 
       # maplex: our overlay (this repo, default branch) on top of the upstream tag.
@@ -51,48 +64,14 @@ jobs:
           persist-credentials: false
 
       - name: Apply maplex overlay
+        env:
+          MAPLEX_RELEASE_VERSION: ${{ inputs.version }}
         run: node _maplex/maplex/apply.cjs .
 
       - name: Verify release source and versions
         env:
           VERSION: ${{ inputs.version }}
-        run: |
-          node <<'NODE'
-          const fs = require("fs");
-
-          const version = process.env.VERSION;
-          if (!/^\d+\.\d+\.\d+$/.test(version)) {
-            throw new Error(`Invalid release version: ${version}`);
-          }
-
-          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-          const project = fs.readFileSync("TokenTrackerBar/project.yml", "utf8");
-          const csproj = fs.readFileSync("TokenTrackerWin/TokenTrackerWin.csproj", "utf8");
-          const marketingVersions = [...project.matchAll(/MARKETING_VERSION:\s*"([^"]+)"/g)]
-            .map((match) => match[1]);
-          // The shared registry covers every managed file, including the Linux
-          // client's Cargo.toml / Cargo.lock / tauri.conf.json / PKGBUILD, so
-          // adding a platform never needs a new hand-written check here.
-          const { collectVersionEntries } = require("./scripts/version-files.cjs");
-          const checks = [
-            ["package.json", pkg.version],
-            ["package-lock.json", lock.version],
-            ["package-lock.json root package", lock.packages?.[""]?.version],
-            ...marketingVersions.map((value, index) => [`MARKETING_VERSION #${index + 1}`, value]),
-            ["TokenTrackerWin.csproj", csproj.match(/<Version>([^<]+)<\/Version>/)?.[1]],
-            ...collectVersionEntries(process.cwd()).map(({ label, version }) => [label, version]),
-          ];
-
-          if (marketingVersions.length === 0) {
-            throw new Error("No MARKETING_VERSION entries found in TokenTrackerBar/project.yml");
-          }
-          for (const [source, actual] of checks) {
-            if (actual !== version) {
-              throw new Error(`${source} version (${actual ?? "missing"}) does not match ${version}`);
-            }
-          }
-          NODE
+        run: node _maplex/maplex/verify-versions.cjs . "${{ steps.ver.outputs.upstream }}" "$VERSION"
 
       # A failed release may be re-dispatched from the SAME commit and replace
       # draft assets. A published release is immutable and can never be reused.
@@ -121,8 +100,12 @@ jobs:
             notes=$(mktemp)
             {
               echo "TokenTracker $tag — maplex self-hosted build."
+              if [ "$VERSION" != "${{ steps.ver.outputs.upstream }}" ]; then
+                echo
+                echo "maplex sub-release on top of upstream v${{ steps.ver.outputs.upstream }} (client changes only; upstream's next version still updates normally)."
+              fi
               echo
-              echo "- Upstream source: [xiufengsun/TokenTracker@$tag](https://github.com/xiufengsun/TokenTracker/releases/tag/$tag) (\`${upstream_sha:0:12}\`)"
+              echo "- Upstream source: [xiufengsun/TokenTracker@v${{ steps.ver.outputs.upstream }}](https://github.com/xiufengsun/TokenTracker/releases/tag/v${{ steps.ver.outputs.upstream }}) (\`${upstream_sha:0:12}\`)"
               echo "- maplex overlay: \`${overlay_sha:0:12}\` (backend https://insforge.maplex.top, dashboard https://tokentracker.maplex.top, updates from $GITHUB_REPOSITORY)"
               echo "- macOS build is ad-hoc signed (right-click → Open on first launch); Windows build is unsigned."
               echo
@@ -146,7 +129,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: xiufengsun/TokenTracker
-          ref: refs/tags/v${{ inputs.version }}
+          ref: refs/tags/v${{ needs.create-release.outputs.upstream || inputs.version }}
           persist-credentials: false
 
       # maplex: our overlay (this repo, default branch) on top of the upstream tag.
@@ -156,6 +139,8 @@ jobs:
           persist-credentials: false
 
       - name: Apply maplex overlay
+        env:
+          MAPLEX_RELEASE_VERSION: ${{ inputs.version }}
         run: node _maplex/maplex/apply.cjs .
 
       - uses: actions/setup-node@v7
@@ -168,26 +153,7 @@ jobs:
       # Skipping the project.yml check once shipped v0.5.77 as a DMG whose
       # Info.plist still advertised 0.5.76 — keep both in lockstep.
       - name: Verify version
-        run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [[ "$PKG_VERSION" != "${{ inputs.version }}" ]]; then
-            echo "::error::package.json version ($PKG_VERSION) does not match input (${{ inputs.version }})"
-            exit 1
-          fi
-
-          # Every MARKETING_VERSION in project.yml (app + widget targets) must
-          # equal the requested release version; otherwise the built .app
-          # carries a CFBundleShortVersionString that disagrees with the tag.
-          PROJECT_YML="TokenTrackerBar/project.yml"
-          # BSD sed on macOS runners does NOT understand \s — use [[:space:]].
-          MISMATCHED=$(grep -E '^[[:space:]]*MARKETING_VERSION:' "$PROJECT_YML" \
-            | sed -E 's/.*MARKETING_VERSION:[[:space:]]*"([^"]+)".*/\1/' \
-            | sort -u \
-            | grep -v "^${{ inputs.version }}$" || true)
-          if [ -n "$MISMATCHED" ]; then
-            echo "::error::$PROJECT_YML has MARKETING_VERSION value(s) not matching ${{ inputs.version }}: $MISMATCHED"
-            exit 1
-          fi
+        run: node _maplex/maplex/verify-versions.cjs . "${{ needs.create-release.outputs.upstream }}" "${{ inputs.version }}"
 
       # 1. Build dashboard
       - name: Install dashboard dependencies
@@ -370,6 +336,7 @@ jobs:
     uses: ./.github/workflows/release-windows.yml
     with:
       version: ${{ inputs.version }}
+      upstream: ${{ needs.create-release.outputs.upstream }}
       no_cache: ${{ inputs.no_cache }}
 
   # Build + attach the Linux AppImage to the SAME vX.Y.Z release, so one
@@ -389,7 +356,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: xiufengsun/TokenTracker
-          ref: refs/tags/v${{ inputs.version }}
+          ref: refs/tags/v${{ needs.create-release.outputs.upstream || inputs.version }}
           persist-credentials: false
 
       # maplex: our overlay (this repo, default branch) on top of the upstream tag.
@@ -399,6 +366,8 @@ jobs:
           persist-credentials: false
 
       - name: Apply maplex overlay
+        env:
+          MAPLEX_RELEASE_VERSION: ${{ inputs.version }}
         run: node _maplex/maplex/apply.cjs .
 
       - uses: actions/setup-node@v7
@@ -420,14 +389,7 @@ jobs:
       # A stale Cargo.toml would ship an AppImage whose embedded version
       # disagrees with the tag.
       - name: Verify version
-        run: |
-          set -euo pipefail
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          if [[ "$PKG_VERSION" != "${{ inputs.version }}" ]]; then
-            echo "::error::package.json version ($PKG_VERSION) does not match input (${{ inputs.version }})"
-            exit 1
-          fi
-          npm run validate:versions
+        run: node _maplex/maplex/verify-versions.cjs . "${{ needs.create-release.outputs.upstream }}" "${{ inputs.version }}"
 
       # webkit2gtk + gtk3 + libayatana-appindicator are the runtime libraries
       # the tauri crate links against; librsvg is needed for icon rasterization.

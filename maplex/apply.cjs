@@ -158,10 +158,41 @@ edit("src/lib/local-api.js", [
       try { body = await readJsonBody(req); } catch { json(res, { error: "Invalid JSON" }, 400); return true; }
       const result = maplexBackend.applyChoice(current, body);
       if (!result.ok) { json(res, { error: result.error }, 400); return true; }
+      // Keep one login per backend: stash the current backend's sign-in,
+      // then bring back the target backend's sign-in if it has one.
+      const vaultFiles = { "relay-cookies.json": cookiePath };
+      const fromBase = selectedRuntime.baseUrl;
+      const tokenBelongsHere = Boolean(current.deviceToken) &&
+        normalizeInstanceBaseUrl(current.deviceTokenBaseUrl) === fromBase;
+      if (!selectedRuntime.configurationError && (relayCookies.size > 0 || tokenBelongsHere)) {
+        persistRelayCookies();
+        maplexBackend.saveVault(trackerDataDir, fromBase, tokenBelongsHere ? current : {}, vaultFiles);
+      }
+      let nextConfig = maplexBackend.stripIdentity(result.config);
+      const probe = resolveRuntimeConfig({ config: nextConfig, env: process.env });
+      const targetBase = probe.configurationError ? "" : probe.baseUrl;
+      let restored = null;
+      if (targetBase && targetBase !== fromBase) {
+        restored = maplexBackend.restoreVault(trackerDataDir, targetBase, {});
+        if (restored) nextConfig = { ...nextConfig, ...restored };
+      } else if (targetBase === fromBase) {
+        nextConfig = result.config;
+      }
       fs.mkdirSync(path.dirname(runtimeConfigPath), { recursive: true });
-      writeJsonAtomicSync(runtimeConfigPath, result.config);
+      writeJsonAtomicSync(runtimeConfigPath, nextConfig);
       try { fs.chmodSync(runtimeConfigPath, 0o600); } catch { /* best effort */ }
-      json(res, maplexBackend.describe(result.config, getRuntime()), 200);
+      // getRuntime() notices the new instance and clears the old session...
+      const nextRuntime = getRuntime();
+      // ...then the target backend's own login cookies are put back.
+      if (restored && !nextRuntime.configurationError) {
+        maplexBackend.restoreVault(trackerDataDir, nextRuntime.baseUrl, vaultFiles);
+        relayCookies.clear();
+        try {
+          const saved = JSON.parse(fs.readFileSync(cookiePath, "utf8"));
+          for (const [k, v] of Object.entries(saved || {})) relayCookies.set(k, v);
+        } catch { /* no saved cookies: CLI token still restored */ }
+      }
+      json(res, { ...maplexBackend.describe(nextConfig, nextRuntime), restoredLogin: Boolean(restored) }, 200);
       return true;
     }
     if (p === "/api/runtime-config.js") {`],
@@ -223,6 +254,29 @@ edit("dashboard/src/pages/SettingsPage.jsx", [
     fs.writeFileSync(p, JSON.stringify(data, null, 2) + "\n");
   }
   console.log("✓ backend settings copy");
+}
+
+// ── 4b. maplex sub-releases: vX.Y.Z.N on top of upstream vX.Y.Z ──
+// Updaters compare the native app version, so only those fields (and the
+// dashboard's displayed version) carry the 4th part; npm / Linux (semver only)
+// keep the upstream version. Upstream's next X.Y.(Z+1) still sorts higher.
+edit("TokenTrackerWin/UpdateReleaseClient.cs", [
+  [`if (!Version.TryParse(version, out var parsed) || parsed.Build < 0 || parsed.Revision >= 0)`,
+   `if (!Version.TryParse(version, out var parsed) || parsed.Build < 0) // maplex: allow X.Y.Z.N sub-releases`],
+]);
+{
+  const release = (process.env.MAPLEX_RELEASE_VERSION || "").replace(/^v/, "");
+  const base = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
+  if (release && release !== base) {
+    if (!new RegExp(`^${base.replace(/\./g, "\\.")}\\.[1-9]\\d*$`).test(release)) {
+      console.error(`✗ MAPLEX_RELEASE_VERSION ${release} is not a sub-release of upstream ${base}`); failures++;
+    } else {
+      edit("TokenTrackerBar/project.yml", [[/MARKETING_VERSION: "[^"]+"/g, `MARKETING_VERSION: "${release}"`]]);
+      edit("TokenTrackerWin/TokenTrackerWin.csproj", [[`<Version>${base}</Version>`, `<Version>${release}</Version>`]]);
+      fs.writeFileSync(path.join(root, "dashboard/.env.production.local"), `VITE_APP_VERSION=${release}\n`);
+      console.log(`✓ sub-release version ${release} (upstream ${base})`);
+    }
+  }
 }
 
 // ── 5. Safety net: nothing that ships may still point at the official backend ──

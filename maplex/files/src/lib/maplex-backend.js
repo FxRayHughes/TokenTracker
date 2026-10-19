@@ -84,4 +84,63 @@ function applyChoice(config, body) {
   return { ok: true, config: next };
 }
 
-module.exports = { OFFICIAL_BACKEND, OFFICIAL_HOST, explicitOfficial, describe, applyChoice };
+// ── Per-backend login vault ──
+// Each backend keeps its own sign-in: before switching away, the current
+// backend's identity (CLI device token + relay login cookies) is stashed under
+// backends/<hash>/; switching back restores it, so neither side needs the
+// password again. The upload cursor is NOT restored: history is replayed to
+// the selected backend (idempotent upserts) so nothing synced meanwhile is
+// missed. Files are 0600 inside a 0700 directory.
+const IDENTITY_KEYS = ["deviceToken", "deviceTokenBaseUrl", "deviceId", "user_id", "device_login_at"];
+
+function vaultDir(trackerDataDir, baseUrl) {
+  const crypto = require("node:crypto");
+  const path = require("node:path");
+  const id = crypto.createHash("sha256").update(String(baseUrl || "")).digest("hex").slice(0, 16);
+  return path.join(trackerDataDir, "backends", id);
+}
+
+// files: { name: absolutePath }
+function saveVault(trackerDataDir, baseUrl, config, files) {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  if (!baseUrl) return;
+  const dir = vaultDir(trackerDataDir, baseUrl);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const identity = { baseUrl };
+  for (const key of IDENTITY_KEYS) if (config?.[key] != null) identity[key] = config[key];
+  fs.writeFileSync(path.join(dir, "identity.json"), JSON.stringify(identity), { mode: 0o600 });
+  for (const [name, abs] of Object.entries(files)) {
+    const dst = path.join(dir, name);
+    try { fs.copyFileSync(abs, dst); fs.chmodSync(dst, 0o600); }
+    catch (error) { if (error.code === "ENOENT") { try { fs.unlinkSync(dst); } catch { /* none */ } } else throw error; }
+  }
+}
+
+// Returns the stored identity keys (or null) and copies stored files back.
+function restoreVault(trackerDataDir, baseUrl, files) {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const dir = vaultDir(trackerDataDir, baseUrl);
+  let identity = null;
+  try { identity = JSON.parse(fs.readFileSync(path.join(dir, "identity.json"), "utf8")); } catch { return null; }
+  if (!identity || identity.baseUrl !== baseUrl) return null;
+  for (const [name, abs] of Object.entries(files)) {
+    try { fs.copyFileSync(path.join(dir, name), abs); fs.chmodSync(abs, 0o600); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+  }
+  const out = {};
+  for (const key of IDENTITY_KEYS) if (identity[key] != null) out[key] = identity[key];
+  return out;
+}
+
+function stripIdentity(config) {
+  const next = { ...config };
+  for (const key of IDENTITY_KEYS) delete next[key];
+  return next;
+}
+
+module.exports = {
+  OFFICIAL_BACKEND, OFFICIAL_HOST, explicitOfficial, describe, applyChoice,
+  saveVault, restoreVault, stripIdentity,
+};

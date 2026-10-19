@@ -12,7 +12,7 @@
     "settings.backend.anonKey.label": "Anon key",
     "settings.backend.anonKey.hint": "The backend's public anon key. Never paste an admin ik_ key.",
     "settings.backend.dashboardUrl.label": "Dashboard URL",
-    "settings.backend.relogin_hint": "Switching signs you out; sign in again and local history is re-uploaded to the new backend.",
+    "settings.backend.relogin_hint": "Each backend keeps its own sign-in: switching back restores it. A backend you have never used asks you to sign in once; local history is then uploaded to it.",
     "settings.backend.save": "Switch",
     "settings.backend.saved": "Backend switched. Reloading…",
     "settings.backend.save_error": "Could not switch backend: {{error}}"
@@ -30,7 +30,7 @@
     "settings.backend.anonKey.label": "Anon Key",
     "settings.backend.anonKey.hint": "后端的公开 anon key，切勿填写管理员 ik_ 密钥。",
     "settings.backend.dashboardUrl.label": "仪表盘地址",
-    "settings.backend.relogin_hint": "切换后会退出登录；重新登录后本机历史会重新上传到新后端。",
+    "settings.backend.relogin_hint": "每个后端各自保留登录状态，切回时自动恢复；首次使用的后端需登录一次，之后本机历史会上传到该后端。",
     "settings.backend.save": "切换",
     "settings.backend.saved": "已切换后端，正在重新加载…",
     "settings.backend.save_error": "切换后端失败：{{error}}"
@@ -48,7 +48,7 @@
     "settings.backend.anonKey.label": "Anon Key",
     "settings.backend.anonKey.hint": "後端的公開 anon key，切勿填寫管理員 ik_ 金鑰。",
     "settings.backend.dashboardUrl.label": "儀表板位址",
-    "settings.backend.relogin_hint": "切換後會登出；重新登入後本機歷史會重新上傳到新後端。",
+    "settings.backend.relogin_hint": "每個後端各自保留登入狀態，切回時自動恢復；首次使用的後端需登入一次，之後本機歷史會上傳到該後端。",
     "settings.backend.save": "切換",
     "settings.backend.saved": "已切換後端，正在重新載入…",
     "settings.backend.save_error": "切換後端失敗：{{error}}"
