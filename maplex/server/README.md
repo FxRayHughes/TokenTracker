@@ -20,10 +20,10 @@ InsForge function secrets.
 # then copy insforge/docker-compose.override.local.yml next to its docker-compose.yml.
 
 # Upstream TokenTracker schema + functions (from the upstream tag that is being released):
-git clone --depth 1 -b v1.4.5 https://github.com/xiufengsun/TokenTracker /tmp/tt && (cd /tmp/tt && npm ci)
-node /tmp/tt/scripts/self-host/install.cjs --sql /tmp/tt-install.sql   # then psql -f it (upstream docs/self-hosting.md)
-node maplex/server/build-upstream-functions.cjs /tmp/tt /tmp/tt-fns
-INSFORGE_ADMIN_KEY_FILE=/root/ik.txt node maplex/server/deploy-upstream-functions.mjs /tmp/tt-fns
+git clone --depth 1 -b v1.4.5 https://github.com/xiufengsun/TokenTracker ~/tt && (cd ~/tt && npm ci)
+node ~/tt/scripts/self-host/install.cjs --sql ~/tt-install.sql   # then psql -f it (upstream docs/self-hosting.md)
+node maplex/server/build-upstream-functions.cjs ~/tt ~/tt-fns
+INSFORGE_ADMIN_KEY_FILE=/root/ik.txt node maplex/server/deploy-upstream-functions.mjs ~/tt-fns
 
 # maplex additions (on the server, from a checkout of this branch):
 INSFORGE_DIR=/opt/1panel/apps/custom/insforge bash maplex/server/deploy.sh all
