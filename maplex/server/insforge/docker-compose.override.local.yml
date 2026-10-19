@@ -1,0 +1,8 @@
+services:
+  insforge:
+    image: ghcr.io/insforge/insforge-oss:v2.3.3
+    ports: !override
+      - "127.0.0.1:${APP_PORT:-7130}:7130"
+      - "127.0.0.1:${AUTH_PORT:-7131}:7131"
+  postgres:
+    restart: unless-stopped

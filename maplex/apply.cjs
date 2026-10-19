@@ -236,7 +236,11 @@ edit("dashboard/src/pages/SettingsPage.jsx", [
 ]);
 // Copy strings: English registry row + translations.
 {
-  const strings = JSON.parse(fs.readFileSync(path.join(__dirname, "files", "backend-copy.json"), "utf8"));
+  const strings = { en: {}, zh: {}, "zh-TW": {} };
+  for (const name of ["backend-copy.json", "board-copy.json"]) {
+    const table = JSON.parse(fs.readFileSync(path.join(__dirname, "files", name), "utf8"));
+    for (const [locale, entries] of Object.entries(table)) Object.assign(strings[locale] || (strings[locale] = {}), entries);
+  }
   const csvPath = path.join(root, "dashboard/src/content/copy.csv");
   let csv = fs.readFileSync(csvPath, "utf8");
   if (!csv.endsWith("\n")) csv += "\n";
@@ -254,6 +258,88 @@ edit("dashboard/src/pages/SettingsPage.jsx", [
     fs.writeFileSync(p, JSON.stringify(data, null, 2) + "\n");
   }
   console.log("✓ backend settings copy");
+}
+
+// ── 4c. official leaderboard: view it, merge myself in, preview as, relay ──
+// All extras are switchable in Settings → 官方排行榜 (local prefs) and the
+// relay is a per-account server switch; with them off the page is upstream's.
+copyIn("dashboard/src/lib/maplex-board.js");
+copyIn("dashboard/src/hooks/use-maplex-board.js");
+copyIn("dashboard/src/components/leaderboard/MaplexBoardBar.jsx");
+copyIn("dashboard/src/components/settings/OfficialBoardSection.jsx");
+edit("dashboard/src/pages/LeaderboardPage.jsx", [
+  [`import { LeaderboardMeChip } from "../components/LeaderboardSummaryCard.jsx";`,
+   `import { LeaderboardMeChip } from "../components/LeaderboardSummaryCard.jsx";\nimport { MaplexBoardBar } from "../components/leaderboard/MaplexBoardBar.jsx";\nimport { loadBoard, useBoardView, useBridgeStatus } from "../hooks/use-maplex-board.js";\nimport { boardSources } from "../lib/maplex-board.js";`],
+  [`  const [listReloadToken, setListReloadToken] = useState(0);\n`,
+   `  const [listReloadToken, setListReloadToken] = useState(0);\n  const boardView = useBoardView();\n  const boardBridge = useBridgeStatus();\n  const boardBridgeStatus = boardBridge.status;\n  const boardViewKey = \`\${boardView.source}|\${boardView.preview}|\${boardView.customUserId}|\${boardView.prefs.mergeSelf}|\${boardBridgeStatus?.official_user_id || ""}\`;\n`],
+  [`        userId: cloudUser?.id || null,\n        period,\n        pageSize,\n        offset: listOffset,\n      }),\n    [cloudUser?.id, leaderboardAccessMode, leaderboardBaseUrl, listOffset, mockEnabled, pageSize, period],`,
+   `        userId: boardView.isDefault ? cloudUser?.id || null : \`maplex:\${boardViewKey}:\${cloudUser?.id || ""}\`,\n        period,\n        pageSize,\n        offset: listOffset,\n      }),\n    [boardView.isDefault, boardViewKey, cloudUser?.id, leaderboardAccessMode, leaderboardBaseUrl, listOffset, mockEnabled, pageSize, period],`],
+  [`      const data = await getLeaderboard({\n        baseUrl: leaderboardBaseUrl,\n        userId: cloudUser?.id || null,\n        period,\n        limit: pageSize,\n        offset: listOffset,\n      });`,
+   `      const data = boardView.isDefault || mockEnabled
+        ? await getLeaderboard({
+            baseUrl: leaderboardBaseUrl,
+            userId: cloudUser?.id || null,
+            period,
+            limit: pageSize,
+            offset: listOffset,
+          })
+        : await loadBoard({ view: boardView, bridge: boardBridgeStatus, cloudUserId: cloudUser?.id || null, period, limit: pageSize, offset: listOffset });`],
+  [`    listReloadToken,\n    mockEnabled,\n    period,\n    pageSize,\n  ]);`,
+   `    listReloadToken,\n    mockEnabled,\n    period,\n    pageSize,\n    boardViewKey,\n  ]);`],
+  // A preview / foreign board is read-only: the "me" chip follows the
+  // previewed identity, profile modals stay on the current backend's users.
+  [`          {!signedIn && (\n            <div className="mb-6 flex`,
+   `          <MaplexBoardBar
+            view={boardView}
+            sources={boardSources()}
+            bridge={boardBridge.available ? { ...(boardBridgeStatus || {}), available: true } : null}
+            merged={Boolean(listData?.maplex?.merged)}
+            disabled={currentListState.loading}
+          />
+
+          {!signedIn && (\n            <div className="mb-6 flex`],
+  [`  const openProfileModal = useCallback((userId) => {\n    if (typeof userId === "string" && userId.trim()) setModalUserId(userId.trim());\n  }, []);`,
+   `  const foreignBoardRef = React.useRef(false);\n  const openProfileModal = useCallback((userId) => {\n    if (typeof userId !== "string" || !userId.trim()) return;\n    if (foreignBoardRef.current) {\n      const url = foreignBoardRef.current(userId.trim());\n      if (url) window.open(url, "_blank", "noopener,noreferrer");\n      return;\n    }\n    setModalUserId(userId.trim());\n  }, []);`],
+  [`  const listData = currentListState.data;\n`,
+   `  const listData = currentListState.data;\n  foreignBoardRef.current = listData?.maplex && !listData.maplex.native\n    ? (id) => (listData?.me?.maplex_self && id === listData.me.user_id ? null : profileUrlForBoard(listData.maplex.source, id))\n    : false;\n`],
+]);
+edit("dashboard/src/pages/LeaderboardPage.jsx", [
+  [`import { boardSources } from "../lib/maplex-board.js";`, `import { boardSources, profileUrlFor as profileUrlForBoard } from "../lib/maplex-board.js";`],
+]);
+edit("dashboard/src/pages/SettingsPage.jsx", [
+  [`import { BackendSection } from "../components/settings/BackendSection.jsx";`,
+   `import { BackendSection } from "../components/settings/BackendSection.jsx";\nimport { OfficialBoardSection } from "../components/settings/OfficialBoardSection.jsx";`],
+  [`import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Server, Settings, UserRound } from "lucide-react";`,
+   `import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Server, Settings, Trophy, UserRound } from "lucide-react";`],
+  [`  BACKEND: "backend",\n`, `  BACKEND: "backend",\n  LEADERBOARD: "leaderboard",\n`],
+  [`    {\n      id: SETTINGS_SECTION_IDS.LIMITS,`,
+   `    {
+      id: SETTINGS_SECTION_IDS.LEADERBOARD,
+      label: copy("settings.section.officialboard"),
+      description: copy("settings.section.officialboard.description"),
+      group: SETTINGS_GROUP_IDS.PERSONAL,
+      Icon: Trophy,
+      content: activeSection === SETTINGS_SECTION_IDS.LEADERBOARD ? <OfficialBoardSection /> : null,
+    },
+    {\n      id: SETTINGS_SECTION_IDS.LIMITS,`],
+]);
+
+// "Maplex" is a brand name: identical in every locale.
+edit("scripts/validate-locale-coverage.cjs", [
+  ["const SOURCE_IDENTICAL_KEY_ALLOWLIST = [\n",
+   "const SOURCE_IDENTICAL_KEY_ALLOWLIST = [\n  /^(settings[.]backend[.]preset|leaderboard[.]maplex[.]source)[.]maplex$/,\n"],
+]);
+
+// Test mocks of insforge-config need the first-party helper added in section 4.
+for (const [file, value] of [["account-owner", "false"], ["initialization", "true"], ["native-oauth", "true"], ["signout", "true"], ["", "true"]]) {
+  const f = `dashboard/src/contexts/__tests__/InsforgeAuthContext${file ? "." + file : ""}.test.jsx`;
+  edit(f, [[`  isOfficialInsforgeInstance: () => ${value},\n`,
+    `  isOfficialInsforgeInstance: () => ${value},\n  isFirstPartyInsforgeInstance: () => ${value},\n`]], { optional: true });
+}
+for (const t of ["cloud-sync", "self-host"]) {
+  edit(`dashboard/src/components/settings/useAccountProfileSettings.${t}.test.jsx`, [
+    [`isOfficialInsforgeInstance: () => false }));`, `isOfficialInsforgeInstance: () => false, isFirstPartyInsforgeInstance: () => false }));`],
+  ], { optional: true });
 }
 
 // ── 4b. maplex sub-releases: vX.Y.Z.N on top of upstream vX.Y.Z ──
@@ -307,7 +393,9 @@ shipped.forEach(walk);
 // maplex-backend.js / insforge-config.ts also carry the official instance as
 // the user-selectable "official" backend preset.
 const allowed = ["src/lib/runtime-config.js", "src/lib/function-url.js", "dashboard/src/lib/function-url.ts",
-  "src/lib/maplex-backend.js", "dashboard/src/lib/insforge-config.ts"];
+  "src/lib/maplex-backend.js", "dashboard/src/lib/insforge-config.ts",
+  // maplex-board.js reads the official leaderboard (read-only, opt-out switch).
+  "dashboard/src/lib/maplex-board.js"];
 const realLeaks = leaks.filter(l => !allowed.some(a => l.startsWith(a + ":")));
 if (realLeaks.length) {
   console.error("✗ official backend still referenced in shipped sources:\n  " + realLeaks.join("\n  "));

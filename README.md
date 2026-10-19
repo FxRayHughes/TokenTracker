@@ -24,6 +24,11 @@ It is a small overlay that every release applies on top of an upstream tag.
 - Auto-updaters:
   - macOS `UpdateChecker.swift` and Windows `UpdateReleaseClient.cs` read this fork's releases.
   - Linux has no auto-updater upstream.
+- Leaderboard extras, each switchable in Settings → 官方排行榜:
+  - An official (tokentracker.cc) leaderboard tab, read-only.
+  - Your own Maplex totals inserted into it as a local preview.
+  - "Preview as": me, a guest or any user id, without switching the app account.
+  - The server-side relay that uploads your summed Maplex usage to an official account (`maplex/server`).
 - Safety net: the script fails if any shipped source still references the official backend, or if an anchor moved upstream.
 
 Values live in `maplex/config.json`.
@@ -57,6 +62,10 @@ gh workflow run release.yml --repo FxRayHughes/TokenTracker --ref maplex -f vers
 - `maplex/verify-versions.cjs` enforces this split.
 
 If the overlay fails after an upstream change, fix the anchor in `maplex/apply.cjs`, push, and re-run.
+
+## Server side
+
+See [`maplex/server/README.md`](maplex/server/README.md): SQL shims, the official-leaderboard bridge, the deploy script and the InsForge override.
 
 ## Server dashboard
 
