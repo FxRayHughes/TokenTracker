@@ -219,8 +219,9 @@ edit("dashboard/src/pages/SettingsPage.jsx", [
   [`  NETWORK: "network",\n`, `  NETWORK: "network",\n  BACKEND: "backend",\n`],
   [`  const { available: proxySettingsAvailable } = proxySettings;\n`,
    `  const { available: proxySettingsAvailable } = proxySettings;\n  const backendSettings = useBackendSettings();\n`],
-  [`    (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable);`,
-   `    (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable) &&\n    (requestedSection !== SETTINGS_SECTION_IDS.BACKEND || backendSettings.available);`],
+  // Insert before the NETWORK line so it works whether NETWORK is last (≤1.4.7) or not (1.4.8 added LOCAL_DATA).
+  [`    (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable)`,
+   `    (requestedSection !== SETTINGS_SECTION_IDS.BACKEND || backendSettings.available) &&\n    (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable)`],
   [`    ...(proxySettingsAvailable\n      ? [{`,
    `    ...(backendSettings.available && backendSettings.config
       ? [{
