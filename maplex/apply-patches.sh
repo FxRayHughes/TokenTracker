@@ -19,7 +19,7 @@ patches=("$here"/patches/*.patch)
 
 git_id=(-c user.name=maplex -c user.email=maplex@users.noreply.github.com -c commit.gpgsign=false)
 base="$(git -C "$root" rev-parse HEAD)"
-if ! git -C "$root" "${git_id[@]}" am -3 --keep-cr --committer-date-is-author-date "${patches[@]}"; then
+if ! git -C "$root" "${git_id[@]}" am -3 --committer-date-is-author-date "${patches[@]}"; then
   echo "" >&2
   echo "✗ a maplex patch no longer applies to this upstream version." >&2
   echo "  Rebase the series locally: maplex/rebuild-patches.sh <tag>" >&2

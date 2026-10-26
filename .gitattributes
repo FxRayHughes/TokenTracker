@@ -1,0 +1,4 @@
+# Patches must stay byte-exact (Windows runners default to core.autocrlf=true).
+*.patch -text
+*.sh text eol=lf
+*.cjs text eol=lf

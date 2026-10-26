@@ -53,7 +53,7 @@ fi
 
 "${g[@]}" checkout -q --detach "$tag"
 "${g[@]}" checkout -q -B "maplex-${tag}"
-if ! "${g[@]}" am -3 --keep-cr "$here"/patches/*.patch; then
+if ! "${g[@]}" am -3 "$here"/patches/*.patch; then
   echo "" >&2
   echo "✗ conflict. In $work: fix files, git add, git am --continue; then re-run:" >&2
   echo "  $0 $tag ${2:-}" >&2
