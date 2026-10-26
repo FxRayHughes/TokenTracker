@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 4/6] maplex: official leaderboard view, merge self, preview-as
+Subject: [PATCH 4/7] maplex: official leaderboard view, merge self, preview-as
 
 
 diff --git a/dashboard/src/components/leaderboard/MaplexBoardBar.jsx b/dashboard/src/components/leaderboard/MaplexBoardBar.jsx

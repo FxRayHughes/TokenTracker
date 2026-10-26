@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 2/6] maplex: disable upstream analytics
+Subject: [PATCH 2/7] maplex: disable upstream analytics
 
 
 diff --git a/dashboard/src/lib/analytics.js b/dashboard/src/lib/analytics.js

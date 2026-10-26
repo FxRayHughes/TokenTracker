@@ -1,15 +1,15 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 5/6] maplex: Settings sections (backend, official board) and
+Subject: [PATCH 5/7] maplex: Settings sections (backend, official board) and
  copy
 
 
 diff --git a/dashboard/src/content/copy.csv b/dashboard/src/content/copy.csv
-index bbabb0b2094e20c45c6317a6a64ec850d7fdd7a5..414ad2312b7ce229f31b345b7d80a613f5fff344 100644
+index b23192847291df2217a0f2788f387948095eebda..50c201c851dd0c250474986cf799c8c3d10e3b72 100644
 --- a/dashboard/src/content/copy.csv
 +++ b/dashboard/src/content/copy.csv
-@@ -2134,3 +2134,60 @@ settings.local_data.error.too_many_devices,settings,SettingsPage,LocalDataSectio
+@@ -2138,3 +2138,60 @@ settings.local_data.error.too_many_devices,settings,SettingsPage,LocalDataSectio
  settings.local_data.error.unknown_device,settings,SettingsPage,LocalDataSection,unknown_device,This imported source is no longer available.,,active
  settings.local_data.error.transfer_failed,settings,SettingsPage,LocalDataSection,transfer_failed,"Transfer failed. Check the file and local app, then try again.",,active
  settings.local_data.local_history_only,dashboard,DashboardPage,LocalDataSection,local_history_only,"Offline snapshots omit session records. Select this device for context breakdown; project, session and outcome analyses always use this device's records.",,active
@@ -71,10 +71,10 @@ index bbabb0b2094e20c45c6317a6a64ec850d7fdd7a5..414ad2312b7ce229f31b345b7d80a613
 +leaderboard.maplex.hint.merged,ui,SettingsPage,BackendSection,hint_merged,"Your Maplex totals are inserted locally as a preview.",maplex,active
 +leaderboard.maplex.hint.link_cta,ui,SettingsPage,BackendSection,hint_link_cta,"Upload to the official board",maplex,active
 diff --git a/dashboard/src/content/i18n/zh-TW/core.json b/dashboard/src/content/i18n/zh-TW/core.json
-index 2ce3fd508d8f6dd4fff7488850cf5e85d3120256..fad0fecd974dda43d6fd60642a6d8fd40112cca5 100644
+index 305dea4c2dd7e1cd1646f8832e06c914acac55e4..bf0dc8985818d126233b5fdacd9e9f3530392837 100644
 --- a/dashboard/src/content/i18n/zh-TW/core.json
 +++ b/dashboard/src/content/i18n/zh-TW/core.json
-@@ -824,5 +824,62 @@
+@@ -828,5 +828,62 @@
    "settings.local_data.error.too_many_devices": "已達匯入資料上限，請先移除不再需要的來源。",
    "settings.local_data.error.unknown_device": "此匯入來源已不存在。",
    "settings.local_data.error.transfer_failed": "操作失敗，請檢查檔案與本機應用程式後重試。",
@@ -139,10 +139,10 @@ index 2ce3fd508d8f6dd4fff7488850cf5e85d3120256..fad0fecd974dda43d6fd60642a6d8fd4
 +  "leaderboard.maplex.hint.link_cta": "上傳到官方排行榜"
  }
 diff --git a/dashboard/src/content/i18n/zh/core.json b/dashboard/src/content/i18n/zh/core.json
-index 05f4306a4f648e2d2561c72c01ca1162a05df7b6..e6ae196eaa96bebc42161f35a93d8873a1769f4a 100644
+index 6821b9ec53e8b222d058b63c6817a9f81dc60f3f..2689f9680aae1b7dbe1444d6f426a232d5e20ee2 100644
 --- a/dashboard/src/content/i18n/zh/core.json
 +++ b/dashboard/src/content/i18n/zh/core.json
-@@ -883,5 +883,62 @@
+@@ -887,5 +887,62 @@
    "settings.local_data.error.too_many_devices": "已达到导入数据上限，请先移除不再需要的来源。",
    "settings.local_data.error.unknown_device": "这个导入来源已不存在。",
    "settings.local_data.error.transfer_failed": "操作失败，请检查文件和本地应用后重试。",
@@ -278,7 +278,7 @@ index a081b14f658810af453f153637fd447c36f584c0..665e9216e52369372d07de1e5161ce5b
        id: SETTINGS_SECTION_IDS.LIMITS,
        label: copy("settings.section.limits"),
 diff --git a/scripts/validate-locale-coverage.cjs b/scripts/validate-locale-coverage.cjs
-index e9c26735c59c25883031620e331f39b601ac7feb..8ad7d9fb6e556a6dfbbf052be77cc41c9cc9d830 100644
+index 624b99757a738e258851523c26929870d3939551..7be85661ddd1d548f6d3a1d6dd70f84d906da6cc 100644
 --- a/scripts/validate-locale-coverage.cjs
 +++ b/scripts/validate-locale-coverage.cjs
 @@ -15,6 +15,7 @@ const REQUIRED_COLUMNS = ["key", "module", "page", "component", "slot", "text"];

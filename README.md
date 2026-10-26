@@ -82,7 +82,7 @@ See [`maplex/server/README.md`](maplex/server/README.md): SQL shims, the officia
 ## Server dashboard
 
 ```bash
-git clone --depth 1 -b v1.4.8 https://github.com/xiufengsun/TokenTracker && cd TokenTracker
+git clone --depth 1 -b v1.4.11 https://github.com/xiufengsun/TokenTracker && cd TokenTracker
 bash /path/to/maplex/apply-patches.sh . && npm ci --prefix dashboard
 VITE_INSFORGE_BASE_URL=https://insforge.maplex.top VITE_INSFORGE_ANON_KEY=anon_ccd53a08643fee52b46be47046ce44c69d0cd34b npm run dashboard:build
 # upload dashboard/dist/* to /opt/1panel/www/sites/tokentracker.maplex.top/index/
