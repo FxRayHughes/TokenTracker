@@ -1,0 +1,655 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 4/6] maplex: official leaderboard view, merge self, preview-as
+
+
+diff --git a/dashboard/src/components/leaderboard/MaplexBoardBar.jsx b/dashboard/src/components/leaderboard/MaplexBoardBar.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..a471fc976076a905134011cc1cfe09d6866936f5
+--- /dev/null
++++ b/dashboard/src/components/leaderboard/MaplexBoardBar.jsx
+@@ -0,0 +1,100 @@
++import React, { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
++import { copy } from "../../lib/copy";
++import { cn } from "../../lib/cn";
++import { Select } from "../../ui/components";
++import { isUserId } from "../../lib/maplex-board.js";
++
++// maplex: leaderboard source + "preview as" controls. Switching here only
++// changes what this page shows; the app's signed-in account is untouched.
++const SOURCE_LABELS = {
++  current: () => copy("leaderboard.maplex.source.current"),
++  maplex: () => copy("leaderboard.maplex.source.maplex"),
++  official: () => copy("leaderboard.maplex.source.official"),
++};
++const PREVIEW_LABELS = {
++  self: () => copy("leaderboard.maplex.preview.self"),
++  guest: () => copy("leaderboard.maplex.preview.guest"),
++  custom: () => copy("leaderboard.maplex.preview.custom"),
++};
++
++export function MaplexBoardBar({ view, sources, bridge, merged, disabled }) {
++  const { prefs, source, preview, rawCustomUserId, setView } = view;
++  const [draftId, setDraftId] = useState(rawCustomUserId);
++  useEffect(() => setDraftId(rawCustomUserId), [rawCustomUserId]);
++  if (!prefs.showOfficialBoard && !prefs.previewSwitcher) return null;
++
++  const invalidId = preview === "custom" && draftId.trim() !== "" && !isUserId(draftId);
++  const commitId = () => {
++    if (isUserId(draftId)) setView({ customUserId: draftId.trim() });
++  };
++  const officialHint = source === "official" && preview === "self"
++    ? bridge?.linked
++      ? copy("leaderboard.maplex.hint.linked")
++      : merged
++        ? copy("leaderboard.maplex.hint.merged")
++        : null
++    : null;
++
++  return (
++    <div className="mb-5 flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
++      {prefs.showOfficialBoard && (
++        <div className="inline-flex h-9 shrink-0 items-center self-start rounded-full border border-oai-gray-200 p-1 dark:border-oai-gray-800">
++          {sources.map((id) => (
++            <button
++              key={id}
++              type="button"
++              disabled={disabled}
++              aria-pressed={source === id}
++              onClick={() => setView({ source: id })}
++              className={cn(
++                "flex h-7 items-center rounded-full px-3 text-sm font-medium transition-colors",
++                source === id
++                  ? "bg-oai-gray-200 text-oai-black dark:bg-oai-gray-800 dark:text-white"
++                  : "text-oai-gray-500 hover:text-oai-gray-800 dark:text-oai-gray-400 dark:hover:text-oai-gray-200",
++              )}
++            >
++              {SOURCE_LABELS[id]()}
++            </button>
++          ))}
++        </div>
++      )}
++      {prefs.previewSwitcher && (
++        <div className="flex min-w-0 flex-wrap items-center gap-2">
++          <span className="whitespace-nowrap text-oai-gray-500 dark:text-oai-gray-400">{copy("leaderboard.maplex.preview.label")}</span>
++          <Select
++            value={preview}
++            onValueChange={(value) => setView({ preview: String(value) })}
++            disabled={disabled}
++            ariaLabel={copy("leaderboard.maplex.preview.label")}
++            options={["self", "guest", "custom"].map((id) => ({ value: id, label: PREVIEW_LABELS[id]() }))}
++            className="px-3 py-1 text-oai-gray-700 dark:text-oai-gray-300"
++          />
++          {preview === "custom" && (
++            <input
++              type="text"
++              value={draftId}
++              onChange={(event) => setDraftId(event.target.value)}
++              onBlur={commitId}
++              onKeyDown={(event) => { if (event.key === "Enter") commitId(); }}
++              placeholder={copy("leaderboard.maplex.preview.custom_placeholder")}
++              aria-label={copy("leaderboard.maplex.preview.custom")}
++              aria-invalid={invalidId}
++              spellCheck={false}
++              className={cn(
++                "h-8 w-72 max-w-full rounded-md border bg-transparent px-2.5 font-mono text-xs outline-none transition-colors focus:border-oai-brand-500 dark:text-white",
++                invalidId ? "border-red-400" : "border-oai-gray-300 dark:border-oai-gray-700",
++              )}
++            />
++          )}
++        </div>
++      )}
++      {officialHint && <span className="text-xs text-oai-gray-500 dark:text-oai-gray-400">{officialHint}</span>}
++      {source === "official" && preview === "self" && !bridge?.linked && bridge?.available && (
++        <Link to="/settings?section=leaderboard" className="text-xs text-oai-brand-600 underline-offset-2 hover:underline dark:text-oai-brand-400">
++          {copy("leaderboard.maplex.hint.link_cta")}
++        </Link>
++      )}
++    </div>
++  );
++}
+diff --git a/dashboard/src/components/settings/OfficialBoardSection.jsx b/dashboard/src/components/settings/OfficialBoardSection.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..dc8a860cfdf080b27e8f2f447e37619b09c3b0bd
+--- /dev/null
++++ b/dashboard/src/components/settings/OfficialBoardSection.jsx
+@@ -0,0 +1,152 @@
++import React, { useEffect, useRef, useState } from "react";
++import { Loader2 } from "lucide-react";
++import { copy } from "../../lib/copy";
++import { Button } from "../../ui/components/Button.jsx";
++import { SectionCard, SettingsRow, ToggleSwitch } from "./Controls.jsx";
++import { useBoardPrefs, useBridgeStatus } from "../../hooks/use-maplex-board.js";
++
++// maplex: every leaderboard extra is an opt-in/opt-out switch here.
++//  - show the official board / merge my totals into it / "preview as"
++//    (all local display preferences), and
++//  - the Maplex → official upload bridge (server side, per account).
++const STATUS_LABELS = {
++  linked: () => copy("settings.officialboard.status.linked"),
++  ok: () => copy("settings.officialboard.status.ok"),
++  up_to_date: () => copy("settings.officialboard.status.up_to_date"),
++  throttled: () => copy("settings.officialboard.status.throttled"),
++  token_rejected: () => copy("settings.officialboard.status.token_rejected"),
++  error: () => copy("settings.officialboard.status.error"),
++};
++
++function formatTime(value) {
++  const date = value ? new Date(value) : null;
++  return date && Number.isFinite(date.getTime()) ? date.toLocaleString() : "";
++}
++
++const PREF_COPY = {
++  showOfficialBoard: () => [copy("settings.officialboard.showOfficialBoard.label"), copy("settings.officialboard.showOfficialBoard.hint")],
++  mergeSelf: () => [copy("settings.officialboard.mergeSelf.label"), copy("settings.officialboard.mergeSelf.hint")],
++  previewSwitcher: () => [copy("settings.officialboard.previewSwitcher.label"), copy("settings.officialboard.previewSwitcher.hint")],
++};
++
++function PrefRow({ id, prefs, setPrefs }) {
++  const [label, hint] = PREF_COPY[id]();
++  return (
++    <SettingsRow
++      label={label}
++      hint={hint}
++      control={
++        <ToggleSwitch
++          checked={Boolean(prefs[id])}
++          onChange={() => setPrefs({ [id]: !prefs[id] })}
++          ariaLabel={label}
++        />
++      }
++    />
++  );
++}
++
++function BridgeRows() {
++  const { available, status, run } = useBridgeStatus();
++  const [busy, setBusy] = useState(null);
++  const [error, setError] = useState(null);
++  const pollTimer = useRef(null);
++
++  const act = async (action, extra) => {
++    setBusy(action);
++    setError(null);
++    try {
++      return await run(action, extra);
++    } catch (e) {
++      setError(e?.message || String(e));
++      return null;
++    } finally {
++      setBusy(null);
++    }
++  };
++
++  const pending = status?.pending || null;
++  useEffect(() => {
++    if (!pending) return undefined;
++    pollTimer.current = setInterval(() => { run("link_poll").catch(() => {}); }, 5000);
++    return () => clearInterval(pollTimer.current);
++  }, [pending, run]);
++
++  if (!available) {
++    return <SettingsRow label={copy("settings.officialboard.bridge.label")} hint={copy("settings.officialboard.bridge.unavailable")} control={null} />;
++  }
++  const linked = Boolean(status?.linked);
++  const statusText = status?.last_status && STATUS_LABELS[status.last_status] ? STATUS_LABELS[status.last_status]() : "";
++  const detail = [
++    statusText,
++    status?.last_relay_at ? copy("settings.officialboard.bridge.last_relay", { ts: formatTime(status.last_relay_at) }) : "",
++    status?.next_allowed_at ? copy("settings.officialboard.bridge.next_allowed", { ts: formatTime(status.next_allowed_at) }) : "",
++  ].filter(Boolean).join(" · ");
++
++  return (
++    <>
++      <SettingsRow
++        label={copy("settings.officialboard.bridge.label")}
++        hint={linked ? copy("settings.officialboard.bridge.hint_linked") : copy("settings.officialboard.bridge.hint")}
++        control={linked ? (
++          <ToggleSwitch
++            checked={status.enabled !== false}
++            disabled={busy !== null}
++            onChange={() => act("set_enabled", { enabled: status.enabled === false })}
++            ariaLabel={copy("settings.officialboard.bridge.label")}
++          />
++        ) : (
++          <Button type="button" size="sm" onClick={() => act("link_start")} disabled={busy !== null || Boolean(pending)}>
++            {busy === "link_start" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
++            {copy("settings.officialboard.bridge.link")}
++          </Button>
++        )}
++      />
++      {pending && !linked && (
++        <SettingsRow
++          label={copy("settings.officialboard.bridge.code", { code: pending.user_code })}
++          hint={copy("settings.officialboard.bridge.code_hint")}
++          control={
++            <a href={pending.verification_uri} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-oai-brand-600 underline-offset-2 hover:underline dark:text-oai-brand-400">
++              {copy("settings.officialboard.bridge.open_official")}
++            </a>
++          }
++        />
++      )}
++      {linked && (
++        <SettingsRow
++          label={copy("settings.officialboard.bridge.status_label")}
++          hint={detail || null}
++          control={
++            <div className="flex items-center gap-2">
++              <Button type="button" size="sm" variant="secondary" onClick={() => act("relay_now")} disabled={busy !== null || status.enabled === false}>
++                {busy === "relay_now" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
++                {copy("settings.officialboard.bridge.relay_now")}
++              </Button>
++              <Button type="button" size="sm" variant="secondary" onClick={() => act("unlink")} disabled={busy !== null}>
++                {copy("settings.officialboard.bridge.unlink")}
++              </Button>
++            </div>
++          }
++        />
++      )}
++      {error && <p role="alert" className="py-2 text-xs text-red-600 dark:text-red-400">{copy("settings.officialboard.bridge.error", { error })}</p>}
++    </>
++  );
++}
++
++export function OfficialBoardSection() {
++  const [prefs, setPrefs] = useBoardPrefs();
++  return (
++    <div className="space-y-4">
++      <SectionCard title={copy("settings.officialboard.display_title")}>
++        <PrefRow id="showOfficialBoard" prefs={prefs} setPrefs={setPrefs} />
++        <PrefRow id="mergeSelf" prefs={prefs} setPrefs={setPrefs} />
++        <PrefRow id="previewSwitcher" prefs={prefs} setPrefs={setPrefs} />
++      </SectionCard>
++      <SectionCard title={copy("settings.officialboard.bridge_title")}>
++        <BridgeRows />
++      </SectionCard>
++    </div>
++  );
++}
+diff --git a/dashboard/src/hooks/use-maplex-board.js b/dashboard/src/hooks/use-maplex-board.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..ce8e78c8356a0ffd6604b8f8ada39853a7b8694e
+--- /dev/null
++++ b/dashboard/src/hooks/use-maplex-board.js
+@@ -0,0 +1,88 @@
++import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
++import { useInsforgeAuth } from "../contexts/InsforgeAuthContext.jsx";
++import {
++  bridgeAvailable,
++  callBridge,
++  currentInstanceId,
++  fetchBoard,
++  getBoardPrefs,
++  isUserId,
++  mergeSelfIntoBoard,
++  readBoardView,
++  setBoardPrefs,
++  subscribeBoardPrefs,
++  writeBoardView,
++} from "../lib/maplex-board.js";
++
++export function useBoardPrefs() {
++  const prefs = useSyncExternalStore(subscribeBoardPrefs, getBoardPrefs, getBoardPrefs);
++  return [prefs, setBoardPrefs];
++}
++
++// Bridge link status (Maplex → official leaderboard), shared by the
++// leaderboard page and the settings section.
++let bridgeCache = { userId: null, status: null };
++const bridgeListeners = new Set();
++function publishBridge(userId, status) {
++  bridgeCache = { userId, status };
++  bridgeListeners.forEach((fn) => fn());
++}
++export function useBridgeStatus() {
++  const { signedIn = false, user = null, getAccessToken = null } = useInsforgeAuth() || {};
++  const snapshot = useSyncExternalStore(
++    (fn) => { bridgeListeners.add(fn); return () => bridgeListeners.delete(fn); },
++    () => bridgeCache,
++    () => bridgeCache,
++  );
++  const enabled = signedIn && Boolean(user?.id) && bridgeAvailable();
++  const run = useCallback(async (action, extra) => {
++    const token = getAccessToken ? await getAccessToken() : null;
++    const status = await callBridge(token, action, extra);
++    publishBridge(user?.id || null, status);
++    return status;
++  }, [getAccessToken, user?.id]);
++  useEffect(() => {
++    if (!enabled || bridgeCache.userId === user.id) return;
++    run(null).catch(() => publishBridge(user.id, null));
++  }, [enabled, run, user?.id]);
++  const status = enabled && snapshot.userId === user?.id ? snapshot.status : null;
++  return { available: enabled, status, run };
++}
++
++// Which board is shown and whose point of view ("me") it is rendered for.
++// Only local state: the signed-in account of the app never changes.
++export function useBoardView() {
++  const [prefs] = useBoardPrefs();
++  const [view, setViewState] = useState(readBoardView);
++  const current = currentInstanceId();
++  const setView = useCallback((patch) => {
++    setViewState((prev) => {
++      const next = { ...prev, ...patch };
++      writeBoardView(next);
++      return next;
++    });
++  }, []);
++  const source = prefs.showOfficialBoard && view.source ? view.source : current;
++  const preview = prefs.previewSwitcher ? view.preview || "self" : "self";
++  const customUserId = preview === "custom" && isUserId(view.customUserId) ? view.customUserId.trim() : "";
++  const isDefault = (source === current || source === "current") && preview === "self";
++  return { prefs, source, preview, customUserId, rawCustomUserId: view.customUserId || "", isDefault, current, setView };
++}
++
++export async function loadBoard({ view, bridge, cloudUserId, period, limit, offset }) {
++  const native = view.source === view.current || view.source === "current";
++  let userId = null;
++  let merge = false;
++  if (view.preview === "custom") userId = view.customUserId || null;
++  else if (view.preview === "self") {
++    if (native) userId = cloudUserId || null;
++    else if (view.source === "official" && bridge?.linked && bridge.official_user_id) userId = bridge.official_user_id;
++    else merge = view.prefs.mergeSelf && Boolean(cloudUserId);
++  }
++  let data = await fetchBoard(view.source, { period, limit, offset, userId });
++  if (merge) {
++    const mine = await fetchBoard(view.current, { period, limit: 1, offset: 0, userId: cloudUserId }).catch(() => null);
++    if (mine?.me) data = await mergeSelfIntoBoard(data, mine.me, { source: view.source, period, offset, limit });
++  }
++  return { ...data, maplex: { source: view.source, native, merged: merge } };
++}
+diff --git a/dashboard/src/lib/maplex-board.js b/dashboard/src/lib/maplex-board.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..9ab87537668229373fb8f04c75f8b3c9e221d526
+--- /dev/null
++++ b/dashboard/src/lib/maplex-board.js
+@@ -0,0 +1,172 @@
++// maplex: leaderboard sources, preview identity and the official-leaderboard
++// bridge. Everything here is optional and controlled by local preferences
++// (Settings → 官方排行榜); with every switch off the leaderboard behaves exactly
++// like upstream.
++import { getLeaderboard } from "./api";
++import { getInsforgeRemoteUrl } from "./insforge-config";
++
++export const MAPLEX_INSTANCE = Object.freeze({
++  id: "maplex",
++  baseUrl: "https://insforge.maplex.top",
++  functionsUrl: "https://insforge.maplex.top/functions",
++  anonKey: "anon_ccd53a08643fee52b46be47046ce44c69d0cd34b",
++  profileUrl: "https://tokentracker.maplex.top/u/",
++});
++export const OFFICIAL_INSTANCE = Object.freeze({
++  id: "official",
++  baseUrl: "https://srctyff5.us-east.insforge.app",
++  functionsUrl: "https://srctyff5.function2.insforge.app",
++  anonKey:
++    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNDU5NDd9.T0auta_IrVIh0uXW1bob5QSnzvsnJmN28r5XkSGEuQY",
++  profileUrl: "https://www.tokentracker.cc/u/",
++  deviceUrl: "https://www.tokentracker.cc/device",
++});
++const INSTANCES = { maplex: MAPLEX_INSTANCE, official: OFFICIAL_INSTANCE };
++
++// ── preferences ────────────────────────────────────────────────────────────
++const PREFS_KEY = "tt.maplex.board.prefs";
++const VIEW_KEY = "tt.maplex.board.view";
++export const DEFAULT_PREFS = Object.freeze({
++  showOfficialBoard: true, // source switch on the leaderboard page
++  mergeSelf: true, // insert my Maplex totals into the official board (local preview)
++  previewSwitcher: true, // "preview as" selector on the leaderboard page
++});
++const listeners = new Set();
++function readJson(key, fallback) {
++  try {
++    const raw = window.localStorage.getItem(key);
++    return raw ? { ...fallback, ...JSON.parse(raw) } : { ...fallback };
++  } catch {
++    return { ...fallback };
++  }
++}
++let prefsCache = null;
++export function getBoardPrefs() {
++  if (typeof window === "undefined") return DEFAULT_PREFS;
++  if (!prefsCache) prefsCache = readJson(PREFS_KEY, DEFAULT_PREFS);
++  return prefsCache;
++}
++export function setBoardPrefs(patch) {
++  prefsCache = { ...getBoardPrefs(), ...patch };
++  try { window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefsCache)); } catch { /* memory only */ }
++  listeners.forEach((fn) => fn());
++}
++export function subscribeBoardPrefs(fn) {
++  listeners.add(fn);
++  return () => listeners.delete(fn);
++}
++export function readBoardView() {
++  if (typeof window === "undefined") return { source: null, preview: "self", customUserId: "" };
++  return readJson(VIEW_KEY, { source: null, preview: "self", customUserId: "" });
++}
++export function writeBoardView(view) {
++  try { window.localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* memory only */ }
++}
++
++// ── instances ──────────────────────────────────────────────────────────────
++export function currentInstanceId() {
++  const baseUrl = getInsforgeRemoteUrl();
++  if (baseUrl === MAPLEX_INSTANCE.baseUrl) return "maplex";
++  if (baseUrl === OFFICIAL_INSTANCE.baseUrl) return "official";
++  return "current";
++}
++export function boardSources() {
++  const current = currentInstanceId();
++  return current === "current" ? ["current", "maplex", "official"] : ["maplex", "official"];
++}
++export function profileUrlFor(source, userId) {
++  const instance = INSTANCES[source];
++  return instance && userId ? `${instance.profileUrl}${encodeURIComponent(userId)}` : null;
++}
++
++const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
++export function isUserId(value) {
++  return typeof value === "string" && UUID_RE.test(value.trim());
++}
++
++async function fetchRemoteBoard(instance, { period, limit, offset, userId }) {
++  const url = new URL(`${instance.functionsUrl}/tokentracker-leaderboard`);
++  const params = { period, limit, offset, user_id: userId };
++  for (const [key, value] of Object.entries(params)) {
++    if (value != null && value !== "") url.searchParams.set(key, String(value));
++  }
++  const res = await fetch(url.toString(), {
++    headers: { Accept: "application/json", apikey: instance.anonKey },
++    cache: "no-store",
++  });
++  if (!res.ok) throw Object.assign(new Error(`Request failed with HTTP ${res.status}`), { status: res.status });
++  return res.json();
++}
++
++export function fetchBoard(source, params) {
++  const current = currentInstanceId();
++  if (source === "current" || source === current || !INSTANCES[source]) return getLeaderboard(params);
++  return fetchRemoteBoard(INSTANCES[source], params);
++}
++
++// Rank my totals would have on another board: binary search for the first
++// entry with fewer tokens (one row per probe, cached per board snapshot).
++const rankCache = new Map();
++async function rankOnBoard(source, period, totalTokens, totalEntries, generatedAt) {
++  const key = `${source}|${period}|${generatedAt}|${totalTokens}`;
++  if (rankCache.has(key)) return rankCache.get(key);
++  let lo = 0;
++  let hi = Math.max(0, Number(totalEntries) || 0);
++  while (lo < hi) {
++    const mid = Math.floor((lo + hi) / 2);
++    const data = await fetchBoard(source, { period, limit: 1, offset: mid });
++    const tokens = Number(data?.entries?.[0]?.total_tokens) || 0;
++    if (tokens >= totalTokens) lo = mid + 1;
++    else hi = mid;
++  }
++  rankCache.set(key, lo + 1);
++  return lo + 1;
++}
++
++function shiftRanks(entries, fromRank) {
++  return entries.map((entry) => (Number(entry?.rank) >= fromRank ? { ...entry, rank: Number(entry.rank) + 1 } : entry));
++}
++
++// Insert `self` (my row from the backend I sync to) into another board's page.
++export async function mergeSelfIntoBoard(data, self, { source, period, offset, limit }) {
++  const total = Number(self?.total_tokens) || 0;
++  if (!data || !self || total <= 0) return data;
++  const rank = await rankOnBoard(source, period, total, data.total_entries, data.generated_at || "");
++  const mine = { ...self, rank, is_me: true, maplex_self: true };
++  let entries = shiftRanks((data.entries || []).map((e) => ({ ...e, is_me: false })), rank);
++  const index = rank - 1 - offset;
++  if (index >= 0 && index <= entries.length && index < limit) {
++    entries = [...entries.slice(0, index), mine, ...entries.slice(index)].slice(0, limit);
++  }
++  const totalEntries = (Number(data.total_entries) || 0) + 1;
++  return {
++    ...data,
++    entries,
++    me: mine,
++    total_entries: totalEntries,
++    total_pages: Math.max(1, Math.ceil(totalEntries / limit)),
++  };
++}
++
++// ── official bridge (Maplex cloud → official leaderboard) ─────────────────
++const BRIDGE_URL = `${MAPLEX_INSTANCE.functionsUrl}/maplex-official-bridge`;
++export function bridgeAvailable() {
++  return currentInstanceId() === "maplex";
++}
++export async function callBridge(accessToken, action, extra = {}) {
++  if (!accessToken) throw new Error("not_signed_in");
++  const res = await fetch(BRIDGE_URL, {
++    method: action ? "POST" : "GET",
++    headers: {
++      Accept: "application/json",
++      "Content-Type": "application/json",
++      apikey: MAPLEX_INSTANCE.anonKey,
++      Authorization: `Bearer ${accessToken}`,
++    },
++    cache: "no-store",
++    ...(action ? { body: JSON.stringify({ action, ...extra }) } : {}),
++  });
++  const data = await res.json().catch(() => null);
++  if (!res.ok || !data) throw new Error((data && (data.detail || data.error)) || `HTTP ${res.status}`);
++  return data;
++}
+diff --git a/dashboard/src/pages/LeaderboardPage.jsx b/dashboard/src/pages/LeaderboardPage.jsx
+index ab37bc754740acca9c1136d77b17e83e5d74e9bc..a3ffaef701940c816eb772efd6ebdca73010d450 100644
+--- a/dashboard/src/pages/LeaderboardPage.jsx
++++ b/dashboard/src/pages/LeaderboardPage.jsx
+@@ -70,6 +70,9 @@ import { LeaderboardTableScroll } from "../components/LeaderboardTableScroll.jsx
+ import { SortableColumnHeader } from "../components/SortableColumnHeader.jsx";
+ import { useColumnOrder } from "../hooks/use-column-order.js";
+ import { LeaderboardMeChip } from "../components/LeaderboardSummaryCard.jsx";
++import { MaplexBoardBar } from "../components/leaderboard/MaplexBoardBar.jsx";
++import { loadBoard, useBoardView, useBridgeStatus } from "../hooks/use-maplex-board.js";
++import { boardSources, profileUrlFor as profileUrlForBoard } from "../lib/maplex-board.js";
+ import { useCommunityStats } from "../hooks/use-community-stats.js";
+ import {
+   LB_STICKY_TH_RANK,
+@@ -533,8 +536,15 @@ export function LeaderboardPage({
+   const [pageSize, setPageSizeState] = useState(readStoredPageSize);
+   const [modalUserId, setModalUserId] = useState(null);
+   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
++  const foreignBoardRef = React.useRef(false);
+   const openProfileModal = useCallback((userId) => {
+-    if (typeof userId === "string" && userId.trim()) setModalUserId(userId.trim());
++    if (typeof userId !== "string" || !userId.trim()) return;
++    if (foreignBoardRef.current) {
++      const url = foreignBoardRef.current(userId.trim());
++      if (url) window.open(url, "_blank", "noopener,noreferrer");
++      return;
++    }
++    setModalUserId(userId.trim());
+   }, []);
+   const closeProfileModal = useCallback(() => setModalUserId(null), []);
+ 
+@@ -549,6 +559,10 @@ export function LeaderboardPage({
+     }
+   }, []);
+   const [listReloadToken, setListReloadToken] = useState(0);
++  const boardView = useBoardView();
++  const boardBridge = useBridgeStatus();
++  const boardBridgeStatus = boardBridge.status;
++  const boardViewKey = `${boardView.source}|${boardView.preview}|${boardView.customUserId}|${boardView.prefs.mergeSelf}|${boardBridgeStatus?.official_user_id || ""}`;
+ 
+   const [cloudSyncOn, setCloudSyncOn] = useState(() => getCloudSyncEnabled());
+   const [syncing, setSyncing] = useState(false);
+@@ -610,12 +624,12 @@ export function LeaderboardPage({
+         accessMode: leaderboardAccessMode,
+         baseUrl: leaderboardBaseUrl,
+         mockEnabled,
+-        userId: cloudUser?.id || null,
++        userId: boardView.isDefault ? cloudUser?.id || null : `maplex:${boardViewKey}:${cloudUser?.id || ""}`,
+         period,
+         pageSize,
+         offset: listOffset,
+       }),
+-    [cloudUser?.id, leaderboardAccessMode, leaderboardBaseUrl, listOffset, mockEnabled, pageSize, period],
++    [boardView.isDefault, boardViewKey, cloudUser?.id, leaderboardAccessMode, leaderboardBaseUrl, listOffset, mockEnabled, pageSize, period],
+   );
+ 
+   const [listState, setListState] = useState(() => {
+@@ -659,13 +673,15 @@ export function LeaderboardPage({
+       });
+     }
+     (async () => {
+-      const data = await getLeaderboard({
+-        baseUrl: leaderboardBaseUrl,
+-        userId: cloudUser?.id || null,
+-        period,
+-        limit: pageSize,
+-        offset: listOffset,
+-      });
++      const data = boardView.isDefault || mockEnabled
++        ? await getLeaderboard({
++            baseUrl: leaderboardBaseUrl,
++            userId: cloudUser?.id || null,
++            period,
++            limit: pageSize,
++            offset: listOffset,
++          })
++        : await loadBoard({ view: boardView, bridge: boardBridgeStatus, cloudUserId: cloudUser?.id || null, period, limit: pageSize, offset: listOffset });
+       if (!active) return;
+       publishLeaderboardPreloadState(data, {
+         activeContextKey: leaderboardPreloadContextKey,
+@@ -701,6 +717,7 @@ export function LeaderboardPage({
+     mockEnabled,
+     period,
+     pageSize,
++    boardViewKey,
+   ]);
+ 
+   const renderCachedState = useMemo(() => {
+@@ -732,6 +749,9 @@ export function LeaderboardPage({
+     renderCachedState,
+   ]);
+   const listData = currentListState.data;
++  foreignBoardRef.current = listData?.maplex && !listData.maplex.native
++    ? (id) => (listData?.me?.maplex_self && id === listData.me.user_id ? null : profileUrlForBoard(listData.maplex.source, id))
++    : false;
+ 
+   const totalPages = listData?.total_pages ?? null;
+   const totalEntries = listData?.total_entries ?? 0;
+@@ -1123,6 +1143,14 @@ export function LeaderboardPage({
+             </div>
+           </div>
+ 
++          <MaplexBoardBar
++            view={boardView}
++            sources={boardSources()}
++            bridge={boardBridge.available ? { ...(boardBridgeStatus || {}), available: true } : null}
++            merged={Boolean(listData?.maplex?.merged)}
++            disabled={currentListState.loading}
++          />
++
+           {!signedIn && (
+             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
+               <p className="text-oai-gray-500 dark:text-oai-gray-400">{copy("leaderboard.signin_prompt")}</p>

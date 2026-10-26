@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:51:29 +0800
+Subject: [PATCH] =?UTF-8?q?maplex:=20accept=20stateless=20JWT-format=20Git?=
+ =?UTF-8?q?Hub=20tokens=20(ghs=5F=20=E2=80=A6=20two=20dots,=20~520=20chars?=
+ =?UTF-8?q?)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+GitHub App installation tokens move to a stateless JWT format. Treat gh*_ token bodies as opaque: allow '.', '-' and '_' and no length cap. See https://github.blog/changelog/2026-05-15-github-app-installation-tokens-per-request-override-header/
+
+diff --git a/src/lib/usage-limits.js b/src/lib/usage-limits.js
+index df7714c163d957fed7fa2b3a88d5d4d08469d8ea..8e2f66e3b43ff462e9a9443791499453240e1876 100644
+--- a/src/lib/usage-limits.js
++++ b/src/lib/usage-limits.js
+@@ -1730,7 +1730,10 @@ function decryptCopilotAuthDbToken(keyBase64, ciphertextHex) {
+ function isLikelyGithubOauthToken(token) {
+   if (typeof token !== "string") return false;
+   const trimmed = token.trim();
+-  return /^gh[opsur]_[A-Za-z0-9]{20,}$/.test(trimmed)
++  // GitHub is moving tokens to a stateless JWT form (`ghs_<header>.<payload>.<sig>`,
++  // ~520 chars, with `.`, `-` and `_`). Treat the body as opaque: no length cap,
++  // and accept the URL-safe JWT alphabet alongside the classic [A-Za-z0-9].
++  return /^gh[opsur]_[A-Za-z0-9._-]{20,}$/.test(trimmed)
+     || /^github_pat_[A-Za-z0-9_]{20,}$/.test(trimmed);
+ }
+ 
+diff --git a/test/copilot-auth-db.test.js b/test/copilot-auth-db.test.js
+index b90d98e019a242ef2b1b5914d2a13cbbd5295ddf..a0fdc87917723fcdd4b5e96f9481579dba65a2d6 100644
+--- a/test/copilot-auth-db.test.js
++++ b/test/copilot-auth-db.test.js
+@@ -100,6 +100,20 @@ describe("readCopilotAuthDbToken", () => {
+     }
+   });
+ 
++  it("accepts stateless JWT-format GitHub tokens in schema-v0 rows", () => {
++    // Shape of the new stateless tokens: prefix + three base64url segments, ~520 chars.
++    const seg = (n) => "aB3_-".repeat(Math.ceil(n / 5)).slice(0, n);
++    const expected = ["ghs", `${seg(36)}.${seg(400)}.${seg(80)}`].join("_");
++    assert.ok(expected.length > 500);
++    const token = readCopilotAuthDbToken({
++      home: "/home/test",
++      platform: "darwin",
++      sqliteReader: () => [{ auth_authority: "github.com", token_schema_version: 0, token_hex: schemaV0TokenHex(expected) }],
++      securityRunner: () => ({ status: 1, stdout: "" }),
++    });
++    assert.equal(token, expected);
++  });
++
+   it("decrypts the token from auth.db via the keychain key (macOS)", () => {
+     const { keyBase64, tokenHex } = makeAuthDbFixture("ghu_authdb_token");
+     const token = readCopilotAuthDbToken({

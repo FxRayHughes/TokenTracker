@@ -1,0 +1,238 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 3/6] maplex: links and native auto-updaters target the fork;
+ allow X.Y.Z.N
+
+
+diff --git a/TokenTrackerBar/TokenTrackerBar/Services/NativeBridge.swift b/TokenTrackerBar/TokenTrackerBar/Services/NativeBridge.swift
+index cb0a8ff3aa4b70eebcb436ec3acc9e6e4c1d3550..e521f4d23818b98a62cfb84a75b5978b2743c09c 100644
+--- a/TokenTrackerBar/TokenTrackerBar/Services/NativeBridge.swift
++++ b/TokenTrackerBar/TokenTrackerBar/Services/NativeBridge.swift
+@@ -562,7 +562,7 @@ final class NativeBridge {
+                 self?.pushSettings()
+             }
+         case "openAbout":
+-            if let url = URL(string: "https://github.com/xiufengsun/TokenTracker") {
++            if let url = URL(string: "https://github.com/FxRayHughes/TokenTracker") {
+                 NSWorkspace.shared.open(url)
+             }
+         case "openWidgetGallery":
+diff --git a/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift b/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
+index 25b6d4814207d037175980c97186db1d1088adc2..6d56531d3aaedd5720d54ac759c9a345a1346234 100644
+--- a/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
++++ b/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
+@@ -1363,7 +1363,7 @@ final class StatusBarController: NSObject {
+     }
+ 
+     @objc private func openGitHub() {
+-        if let url = URL(string: "https://github.com/xiufengsun/TokenTracker") {
++        if let url = URL(string: "https://github.com/FxRayHughes/TokenTracker") {
+             NSWorkspace.shared.open(url)
+         }
+     }
+diff --git a/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift b/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
+index 43267dfec5195e7a3cf5d6a2f2ae99deaebe3487..6d1e4083f86d2d53c256a3bbe65354524a282eec 100644
+--- a/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
++++ b/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
+@@ -6,8 +6,8 @@ final class UpdateChecker {
+ 
+     static let shared = UpdateChecker()
+ 
+-    private let repo = "xiufengsun/TokenTracker"
+-    private let releaseURL: String = "https://github.com/xiufengsun/TokenTracker/releases/latest"
++    private let repo = "FxRayHughes/TokenTracker"
++    private let releaseURL: String = "https://github.com/FxRayHughes/TokenTracker/releases/latest"
+ 
+     /// Observable status for menu item display
+     private(set) var statusText: String? = nil {
+diff --git a/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift b/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
+index dc44c8455078fe2814da469e5f575ab22f9e9149..f06577b61790bca4b3748d8c7cd95be5d21a5d24 100644
+--- a/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
++++ b/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
+@@ -37,7 +37,7 @@ struct TokenTrackerBarApp: App {
+                 #if !TOKENTRACKER_NATIVE_QA
+                 CommandGroup(replacing: .help) {
+                     Button(Strings.menuHelp) {
+-                        if let url = URL(string: "https://www.tokentracker.cc") {
++                        if let url = URL(string: "https://tokentracker.maplex.top") {
+                             NSWorkspace.shared.open(url)
+                         }
+                     }
+diff --git a/TokenTrackerBar/TokenTrackerBar/Views/DynamicIslandView.swift b/TokenTrackerBar/TokenTrackerBar/Views/DynamicIslandView.swift
+index 860d5d832e7f7431780bca5b017ecc7ddfbddf8b..e8e172ededb5d5000682ab53f65626c4194bba35 100644
+--- a/TokenTrackerBar/TokenTrackerBar/Views/DynamicIslandView.swift
++++ b/TokenTrackerBar/TokenTrackerBar/Views/DynamicIslandView.swift
+@@ -418,7 +418,7 @@ struct DynamicIslandView: View {
+         let appIcon = NSApp.applicationIconImage ?? NSImage(named: NSImage.applicationIconName) ?? NSImage()
+         return HStack(spacing: 0) {
+             Button(action: {
+-                if let url = URL(string: "https://www.tokentracker.cc") {
++                if let url = URL(string: "https://tokentracker.maplex.top") {
+                     NSWorkspace.shared.open(url)
+                 }
+             }) {
+@@ -448,7 +448,7 @@ struct DynamicIslandView: View {
+             Spacer()
+ 
+             Button(action: {
+-                if let url = URL(string: "https://github.com/xiufengsun/TokenTracker") {
++                if let url = URL(string: "https://github.com/FxRayHughes/TokenTracker") {
+                     NSWorkspace.shared.open(url)
+                 }
+             }) {
+@@ -773,7 +773,7 @@ final class GitHubStarStore: ObservableObject {
+     }
+ 
+     func fetchStars() {
+-        guard let url = URL(string: "https://api.github.com/repos/xiufengsun/TokenTracker") else { return }
++        guard let url = URL(string: "https://api.github.com/repos/FxRayHughes/TokenTracker") else { return }
+         var request = URLRequest(url: url, timeoutInterval: 10)
+         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+         Task {
+diff --git a/TokenTrackerWin/Constants.cs b/TokenTrackerWin/Constants.cs
+index cd500b9a92ef3a620662acba3fa72c74e62a1b1e..8c3f77eccc8056e89b3c5e314a7b760101928a79 100644
+--- a/TokenTrackerWin/Constants.cs
++++ b/TokenTrackerWin/Constants.cs
+@@ -18,7 +18,7 @@ internal static class Constants
+     public const int StartupTimeoutSeconds = 20;
+ 
+     public const string AppDisplayName = "TokenTracker";
+-    public const string GitHubUrl = "https://github.com/xiufengsun/TokenTracker";
++    public const string GitHubUrl = "https://github.com/FxRayHughes/TokenTracker";
+ 
+     /// <summary>HKCU Run-key value name used for launch-at-startup.</summary>
+     public const string StartupRegistryValueName = "TokenTracker";
+diff --git a/TokenTrackerWin/UpdateReleaseClient.cs b/TokenTrackerWin/UpdateReleaseClient.cs
+index 58748de53be8f65dc9f4d74e2af17cd1df13750f..1d2a1125b2b8f4b55aebda8b4719f6d1ffccd502 100644
+--- a/TokenTrackerWin/UpdateReleaseClient.cs
++++ b/TokenTrackerWin/UpdateReleaseClient.cs
+@@ -13,11 +13,11 @@ namespace TokenTrackerWin;
+ /// </summary>
+ internal sealed class UpdateReleaseClient(HttpClient http, Func<DateTimeOffset>? utcNow = null)
+ {
+-    internal const string ReleasePageUrl = "https://github.com/xiufengsun/TokenTracker/releases/latest";
++    internal const string ReleasePageUrl = "https://github.com/FxRayHughes/TokenTracker/releases/latest";
+     internal const string SetupAssetName = "TokenTracker-Setup.exe";
+-    private const string ApiUrl = "https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest";
+-    private const string TagPath = "/xiufengsun/TokenTracker/releases/tag/";
+-    private const string DownloadBase = "https://github.com/xiufengsun/TokenTracker/releases/download/";
++    private const string ApiUrl = "https://api.github.com/repos/FxRayHughes/TokenTracker/releases/latest";
++    private const string TagPath = "/FxRayHughes/TokenTracker/releases/tag/";
++    private const string DownloadBase = "https://github.com/FxRayHughes/TokenTracker/releases/download/";
+     private readonly Func<DateTimeOffset> _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
+     private DateTimeOffset? _apiNotBefore;
+ 
+@@ -149,7 +149,7 @@ internal sealed class UpdateReleaseClient(HttpClient http, Func<DateTimeOffset>?
+     private static string ParseVersion(string tag)
+     {
+         var version = tag.StartsWith('v') ? tag[1..] : tag;
+-        if (!Version.TryParse(version, out var parsed) || parsed.Build < 0 || parsed.Revision >= 0)
++        if (!Version.TryParse(version, out var parsed) || parsed.Build < 0) // maplex: allow X.Y.Z.N sub-releases
+             throw new InvalidDataException("The release tag is not a stable three-part version.");
+         return version;
+     }
+diff --git a/dashboard/src/components/LocalOnlyNotice.jsx b/dashboard/src/components/LocalOnlyNotice.jsx
+index 095d4df52ab22523d2ee4d7da5a6f40e8253b1a8..77147a24d7ac46c6e9a7cf817d8d6e31631ccbc2 100644
+--- a/dashboard/src/components/LocalOnlyNotice.jsx
++++ b/dashboard/src/components/LocalOnlyNotice.jsx
+@@ -2,7 +2,7 @@ import React from "react";
+ import { Download, ArrowUpRight } from "lucide-react";
+ import { copy } from "../lib/copy";
+ 
+-const RELEASES_URL = "https://github.com/xiufengsun/TokenTracker/releases/latest";
++const RELEASES_URL = "https://github.com/FxRayHughes/TokenTracker/releases/latest";
+ 
+ /**
+  * Empty state for local-first pages (Limits, Skills) when viewed on the
+diff --git a/dashboard/src/components/settings/MenuBarSection.jsx b/dashboard/src/components/settings/MenuBarSection.jsx
+index eb7c2cd08c70a6e242b5d2ffbbe5c7a8518cabd8..9927b4bc36de9da4aa620a96f84382d908189e50 100644
+--- a/dashboard/src/components/settings/MenuBarSection.jsx
++++ b/dashboard/src/components/settings/MenuBarSection.jsx
+@@ -164,7 +164,7 @@ export function NativeAppFooter() {
+   const handleCheckUpdates = async () => {
+     setChecking(true);
+     try {
+-      const res = await fetch("https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest");
++      const res = await fetch("https://api.github.com/repos/FxRayHughes/TokenTracker/releases/latest");
+       if (!res.ok) throw new Error("Failed to fetch");
+       const data = await res.json();
+       const latestVersion = data.tag_name;
+diff --git a/dashboard/src/lib/config.ts b/dashboard/src/lib/config.ts
+index e6d5cc668e53e735baba35a7b16f7bcbbf656cfb..96fa97364ecc9e974e49a53375f12142e282f20c 100644
+--- a/dashboard/src/lib/config.ts
++++ b/dashboard/src/lib/config.ts
+@@ -2,7 +2,7 @@ import { getInsforgeRemoteUrl } from "./insforge-config";
+ 
+ export const STATUSPAGE_URL = "https://tokentracker.statuspage.io/";
+ 
+-export const REPO_URL = "https://github.com/xiufengsun/TokenTracker";
++export const REPO_URL = "https://github.com/FxRayHughes/TokenTracker";
+ export const PRIVACY_URL = `${REPO_URL}/blob/main/docs/PRIVACY.md`;
+ // The releases page lists every asset (used for the "other platforms" link and
+ // as the fallback when we can't detect the OS).
+diff --git a/dashboard/src/pages/LeaderboardProfilePage.jsx b/dashboard/src/pages/LeaderboardProfilePage.jsx
+index f4bfef9e1e597d6dd55b4f39acb63e7585590f26..6affde43b4e47070ed4e82368e790ca1762fe97b 100644
+--- a/dashboard/src/pages/LeaderboardProfilePage.jsx
++++ b/dashboard/src/pages/LeaderboardProfilePage.jsx
+@@ -17,7 +17,7 @@ import {
+   useLeaderboardProfileData,
+ } from "../components/leaderboard/LeaderboardProfileModal.jsx";
+ 
+-const RELEASE_URL = "https://github.com/xiufengsun/TokenTracker/releases/latest";
++const RELEASE_URL = "https://github.com/FxRayHughes/TokenTracker/releases/latest";
+ 
+ /**
+  * Standalone, shareable per-user profile page at /u/:userId. Reuses the same
+diff --git a/dashboard/src/pages/WidgetsPage.jsx b/dashboard/src/pages/WidgetsPage.jsx
+index 75689b860b5558db977cf56ef1cdfa449fc4fe30..30ef9bef9aa95708accb3888b49d389adb5ddce1 100644
+--- a/dashboard/src/pages/WidgetsPage.jsx
++++ b/dashboard/src/pages/WidgetsPage.jsx
+@@ -586,7 +586,7 @@ function HeaderCta() {
+   if (platform === "mac-web") {
+     return (
+       <a
+-        href="https://github.com/xiufengsun/TokenTracker/releases/latest"
++        href="https://github.com/FxRayHughes/TokenTracker/releases/latest"
+         target="_blank"
+         rel="noopener noreferrer"
+         className="inline-flex h-10 items-center gap-2 rounded-lg bg-oai-black px-4 text-sm font-medium text-white no-underline transition-colors hover:bg-oai-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oai-brand-500 focus-visible:ring-offset-2 dark:bg-white dark:text-oai-black dark:hover:bg-oai-gray-200"
+diff --git a/dashboard/src/ui/components/HeaderGithubStar.jsx b/dashboard/src/ui/components/HeaderGithubStar.jsx
+index e178d311d976cb4d80e2781dc3b43937ba6fc91a..996101d5f9f58276d202fc5699fbee1a43d0733a 100644
+--- a/dashboard/src/ui/components/HeaderGithubStar.jsx
++++ b/dashboard/src/ui/components/HeaderGithubStar.jsx
+@@ -5,7 +5,7 @@ import { copy } from "../../lib/copy";
+ /**
+  * Dashboard / marketing header: single row — icon + Star + count (matches Shell header).
+  */
+-export function HeaderGithubStar({ repo = "xiufengsun/TokenTracker" }) {
++export function HeaderGithubStar({ repo = "FxRayHughes/TokenTracker" }) {
+   const [stars, setStars] = useState(null);
+ 
+   useEffect(() => {
+diff --git a/dashboard/src/ui/components/Sidebar.jsx b/dashboard/src/ui/components/Sidebar.jsx
+index 736fc23a4d61c6e6b6b456913814f9ff0c3d449e..e9ec046b84280029c80a15f87a7ba3609eaae382 100644
+--- a/dashboard/src/ui/components/Sidebar.jsx
++++ b/dashboard/src/ui/components/Sidebar.jsx
+@@ -186,7 +186,7 @@ function IconButton({ as = "button", buttonRef, title, onClick, href, children,
+  * Refined GitHub Star pill — Linear "Free plan" style: bordered, tight, with text + count.
+  * `glassChrome`: Mac 侧栏毛玻璃上：gray-500 描边 — 亮色 /20 更淡，暗色 dark:/30 保持可见。
+  */
+-function StarPill({ repo = "xiufengsun/TokenTracker", glassChrome = false }) {
++function StarPill({ repo = "FxRayHughes/TokenTracker", glassChrome = false }) {
+   const [stars, setStars] = useState(null);
+   useEffect(() => {
+     if (typeof window === "undefined") return;
+diff --git a/dashboard/src/ui/dashboard/components/MacAppBanner.jsx b/dashboard/src/ui/dashboard/components/MacAppBanner.jsx
+index 4a66c2060d79ededfb8ead72b8d727080e9dead0..e8693b79ee1f5967b17942265831dfc382ce5ea9 100644
+--- a/dashboard/src/ui/dashboard/components/MacAppBanner.jsx
++++ b/dashboard/src/ui/dashboard/components/MacAppBanner.jsx
+@@ -8,7 +8,7 @@ import { isNativeLinuxApp } from "../../../lib/native-bridge.js";
+ 
+ const DISMISS_KEY = "macAppBannerDismissed";
+ const LOGIN_DISMISS_KEY = "leaderboardBannerDismissed";
+-const RELEASE_URL = "https://github.com/xiufengsun/TokenTracker/releases/latest";
++const RELEASE_URL = "https://github.com/FxRayHughes/TokenTracker/releases/latest";
+ 
+ /** True when loaded inside the native macOS app (WKWebView with ?app=1) */
+ const NATIVE_APP_KEY = "tokentracker_native_app";

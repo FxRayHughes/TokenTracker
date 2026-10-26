@@ -1,0 +1,291 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 5/6] maplex: Settings sections (backend, official board) and
+ copy
+
+
+diff --git a/dashboard/src/content/copy.csv b/dashboard/src/content/copy.csv
+index bbabb0b2094e20c45c6317a6a64ec850d7fdd7a5..414ad2312b7ce229f31b345b7d80a613f5fff344 100644
+--- a/dashboard/src/content/copy.csv
++++ b/dashboard/src/content/copy.csv
+@@ -2134,3 +2134,60 @@ settings.local_data.error.too_many_devices,settings,SettingsPage,LocalDataSectio
+ settings.local_data.error.unknown_device,settings,SettingsPage,LocalDataSection,unknown_device,This imported source is no longer available.,,active
+ settings.local_data.error.transfer_failed,settings,SettingsPage,LocalDataSection,transfer_failed,"Transfer failed. Check the file and local app, then try again.",,active
+ settings.local_data.local_history_only,dashboard,DashboardPage,LocalDataSection,local_history_only,"Offline snapshots omit session records. Select this device for context breakdown; project, session and outcome analyses always use this device's records.",,active
++settings.section.backend,ui,SettingsPage,BackendSection,backend,"Cloud backend",maplex,active
++settings.section.backend.description,ui,SettingsPage,BackendSection,backend_description,"Choose which TokenTracker cloud this app syncs to.",maplex,active
++settings.backend.current,ui,SettingsPage,BackendSection,current,"Current: {{url}}",maplex,active
++settings.backend.choice.label,ui,SettingsPage,BackendSection,choice_label,"Backend",maplex,active
++settings.backend.choice.hint,ui,SettingsPage,BackendSection,choice_hint,"Maplex is the self-hosted default; Official is tokentracker.cc.",maplex,active
++settings.backend.preset.maplex,ui,SettingsPage,BackendSection,preset_maplex,"Maplex",maplex,active
++settings.backend.preset.official,ui,SettingsPage,BackendSection,preset_official,"Official",maplex,active
++settings.backend.preset.custom,ui,SettingsPage,BackendSection,preset_custom,"Custom",maplex,active
++settings.backend.baseUrl.label,ui,SettingsPage,BackendSection,baseUrl_label,"API URL",maplex,active
++settings.backend.anonKey.label,ui,SettingsPage,BackendSection,anonKey_label,"Anon key",maplex,active
++settings.backend.anonKey.hint,ui,SettingsPage,BackendSection,anonKey_hint,"The backend's public anon key. Never paste an admin ik_ key.",maplex,active
++settings.backend.dashboardUrl.label,ui,SettingsPage,BackendSection,dashboardUrl_label,"Dashboard URL",maplex,active
++settings.backend.relogin_hint,ui,SettingsPage,BackendSection,relogin_hint,"Each backend keeps its own sign-in: switching back restores it. A backend you have never used asks you to sign in once; local history is then uploaded to it.",maplex,active
++settings.backend.save,ui,SettingsPage,BackendSection,save,"Switch",maplex,active
++settings.backend.saved,ui,SettingsPage,BackendSection,saved,"Backend switched. Reloading…",maplex,active
++settings.backend.save_error,ui,SettingsPage,BackendSection,save_error,"Could not switch backend: {{error}}",maplex,active
++settings.section.officialboard,ui,SettingsPage,BackendSection,officialboard,"Official leaderboard",maplex,active
++settings.section.officialboard.description,ui,SettingsPage,BackendSection,officialboard_description,"Show tokentracker.cc's leaderboard and send your Maplex totals to it.",maplex,active
++settings.officialboard.display_title,ui,SettingsPage,BackendSection,display_title,"Leaderboard display",maplex,active
++settings.officialboard.showOfficialBoard.label,ui,SettingsPage,BackendSection,showOfficialBoard_label,"Official leaderboard tab",maplex,active
++settings.officialboard.showOfficialBoard.hint,ui,SettingsPage,BackendSection,showOfficialBoard_hint,"Adds a Maplex / Official switch on the leaderboard page. Read-only; nothing is uploaded.",maplex,active
++settings.officialboard.mergeSelf.label,ui,SettingsPage,BackendSection,mergeSelf_label,"Insert me into the official board",maplex,active
++settings.officialboard.mergeSelf.hint,ui,SettingsPage,BackendSection,mergeSelf_hint,"When your account is not on the official board, show your Maplex totals at the rank they would have. Only you see this preview.",maplex,active
++settings.officialboard.previewSwitcher.label,ui,SettingsPage,BackendSection,previewSwitcher_label,"“Preview as” selector",maplex,active
++settings.officialboard.previewSwitcher.hint,ui,SettingsPage,BackendSection,previewSwitcher_hint,"View the leaderboard as yourself, as a guest or as any user id, without switching the app's account.",maplex,active
++settings.officialboard.bridge_title,ui,SettingsPage,BackendSection,bridge_title,"Upload to the official leaderboard",maplex,active
++settings.officialboard.bridge.label,ui,SettingsPage,BackendSection,bridge_label,"Relay my Maplex usage",maplex,active
++settings.officialboard.bridge.hint,ui,SettingsPage,BackendSection,bridge_hint,"The Maplex cloud sums all your devices and uploads the totals to an official tokentracker.cc account as one device. Link once by approving a code on tokentracker.cc.",maplex,active
++settings.officialboard.bridge.hint_linked,ui,SettingsPage,BackendSection,bridge_hint_linked,"Linked. The Maplex cloud uploads your summed usage every 30 minutes; turn off to pause.",maplex,active
++settings.officialboard.bridge.unavailable,ui,SettingsPage,BackendSection,bridge_unavailable,"Available when this app syncs to the Maplex cloud and you are signed in.",maplex,active
++settings.officialboard.bridge.link,ui,SettingsPage,BackendSection,bridge_link,"Link official account",maplex,active
++settings.officialboard.bridge.code,ui,SettingsPage,BackendSection,bridge_code,"Code: {{code}}",maplex,active
++settings.officialboard.bridge.code_hint,ui,SettingsPage,BackendSection,bridge_code_hint,"Open tokentracker.cc, sign in with the official account and approve this code. This page finishes by itself.",maplex,active
++settings.officialboard.bridge.open_official,ui,SettingsPage,BackendSection,bridge_open_official,"Open tokentracker.cc",maplex,active
++settings.officialboard.bridge.status_label,ui,SettingsPage,BackendSection,bridge_status_label,"Relay status",maplex,active
++settings.officialboard.bridge.last_relay,ui,SettingsPage,BackendSection,bridge_last_relay,"last run {{ts}}",maplex,active
++settings.officialboard.bridge.next_allowed,ui,SettingsPage,BackendSection,bridge_next_allowed,"official allows the next upload after {{ts}}",maplex,active
++settings.officialboard.bridge.relay_now,ui,SettingsPage,BackendSection,bridge_relay_now,"Upload now",maplex,active
++settings.officialboard.bridge.unlink,ui,SettingsPage,BackendSection,bridge_unlink,"Unlink",maplex,active
++settings.officialboard.bridge.error,ui,SettingsPage,BackendSection,bridge_error,"Request failed: {{error}}",maplex,active
++settings.officialboard.status.linked,ui,SettingsPage,BackendSection,status_linked,"Linked",maplex,active
++settings.officialboard.status.ok,ui,SettingsPage,BackendSection,status_ok,"Uploaded",maplex,active
++settings.officialboard.status.up_to_date,ui,SettingsPage,BackendSection,status_up_to_date,"Up to date",maplex,active
++settings.officialboard.status.throttled,ui,SettingsPage,BackendSection,status_throttled,"Waiting for the official upload window",maplex,active
++settings.officialboard.status.token_rejected,ui,SettingsPage,BackendSection,status_token_rejected,"Official account rejected the device; link again",maplex,active
++settings.officialboard.status.error,ui,SettingsPage,BackendSection,status_error,"Last upload failed",maplex,active
++leaderboard.maplex.source.current,ui,SettingsPage,BackendSection,source_current,"This backend",maplex,active
++leaderboard.maplex.source.maplex,ui,SettingsPage,BackendSection,source_maplex,"Maplex",maplex,active
++leaderboard.maplex.source.official,ui,SettingsPage,BackendSection,source_official,"Official",maplex,active
++leaderboard.maplex.preview.label,ui,SettingsPage,BackendSection,preview_label,"Preview as",maplex,active
++leaderboard.maplex.preview.self,ui,SettingsPage,BackendSection,preview_self,"Me",maplex,active
++leaderboard.maplex.preview.guest,ui,SettingsPage,BackendSection,preview_guest,"Guest",maplex,active
++leaderboard.maplex.preview.custom,ui,SettingsPage,BackendSection,preview_custom,"User id",maplex,active
++leaderboard.maplex.preview.custom_placeholder,ui,SettingsPage,BackendSection,preview_custom_placeholder,"User id (uuid), Enter to apply",maplex,active
++leaderboard.maplex.hint.linked,ui,SettingsPage,BackendSection,hint_linked,"Your linked official account is highlighted.",maplex,active
++leaderboard.maplex.hint.merged,ui,SettingsPage,BackendSection,hint_merged,"Your Maplex totals are inserted locally as a preview.",maplex,active
++leaderboard.maplex.hint.link_cta,ui,SettingsPage,BackendSection,hint_link_cta,"Upload to the official board",maplex,active
+diff --git a/dashboard/src/content/i18n/zh-TW/core.json b/dashboard/src/content/i18n/zh-TW/core.json
+index 2ce3fd508d8f6dd4fff7488850cf5e85d3120256..fad0fecd974dda43d6fd60642a6d8fd40112cca5 100644
+--- a/dashboard/src/content/i18n/zh-TW/core.json
++++ b/dashboard/src/content/i18n/zh-TW/core.json
+@@ -824,5 +824,62 @@
+   "settings.local_data.error.too_many_devices": "已達匯入資料上限，請先移除不再需要的來源。",
+   "settings.local_data.error.unknown_device": "此匯入來源已不存在。",
+   "settings.local_data.error.transfer_failed": "操作失敗，請檢查檔案與本機應用程式後重試。",
+-  "settings.local_data.local_history_only": "離線快照不含工作階段記錄。內容分解需選擇「本機」查看；專案、工作階段和成效分析始終只包含本機記錄。"
++  "settings.local_data.local_history_only": "離線快照不含工作階段記錄。內容分解需選擇「本機」查看；專案、工作階段和成效分析始終只包含本機記錄。",
++  "settings.section.backend": "雲端後端",
++  "settings.section.backend.description": "選擇本應用同步到哪個 TokenTracker 雲端。",
++  "settings.backend.current": "目前：{{url}}",
++  "settings.backend.choice.label": "後端",
++  "settings.backend.choice.hint": "Maplex 為預設自架實例；官方為 tokentracker.cc。",
++  "settings.backend.preset.maplex": "Maplex",
++  "settings.backend.preset.official": "官方",
++  "settings.backend.preset.custom": "自訂",
++  "settings.backend.baseUrl.label": "API 位址",
++  "settings.backend.anonKey.label": "Anon Key",
++  "settings.backend.anonKey.hint": "後端的公開 anon key，切勿填寫管理員 ik_ 金鑰。",
++  "settings.backend.dashboardUrl.label": "儀表板位址",
++  "settings.backend.relogin_hint": "每個後端各自保留登入狀態，切回時自動恢復；首次使用的後端需登入一次，之後本機歷史會上傳到該後端。",
++  "settings.backend.save": "切換",
++  "settings.backend.saved": "已切換後端，正在重新載入…",
++  "settings.backend.save_error": "切換後端失敗：{{error}}",
++  "settings.section.officialboard": "官方排行榜",
++  "settings.section.officialboard.description": "查看 tokentracker.cc 的排行榜，並把 Maplex 的匯總數據上傳上去。",
++  "settings.officialboard.display_title": "排行榜顯示",
++  "settings.officialboard.showOfficialBoard.label": "顯示官方排行榜切換",
++  "settings.officialboard.showOfficialBoard.hint": "在排行榜頁面增加 Maplex / 官方 切換。只讀，不會上傳任何數據。",
++  "settings.officialboard.mergeSelf.label": "把我插入官方排行榜",
++  "settings.officialboard.mergeSelf.hint": "你的帳號不在官方榜上時，按 Maplex 匯總數據把你插到對應名次。僅本地預覽，只有你能看到。",
++  "settings.officialboard.previewSwitcher.label": "“預覽身份”選擇器",
++  "settings.officialboard.previewSwitcher.hint": "以自己、遊客或任意用戶 ID 的視角查看排行榜，不切換軟件登錄的帳戶。",
++  "settings.officialboard.bridge_title": "上傳到官方排行榜",
++  "settings.officialboard.bridge.label": "轉發我的 Maplex 用量",
++  "settings.officialboard.bridge.hint": "Maplex 雲端匯總你所有設備的數據，作為一台設備上傳到一個官方 tokentracker.cc 帳號。只需在 tokentracker.cc 上批准一次授權碼即可關聯。",
++  "settings.officialboard.bridge.hint_linked": "已關聯。Maplex 雲端每 30 分鐘上傳一次匯總數據；關閉即可暫停。",
++  "settings.officialboard.bridge.unavailable": "需要本應用同步到 Maplex 雲端並已登錄。",
++  "settings.officialboard.bridge.link": "關聯官方帳號",
++  "settings.officialboard.bridge.code": "授權碼：{{code}}",
++  "settings.officialboard.bridge.code_hint": "打開 tokentracker.cc，用官方帳號登錄並批准此授權碼，本頁會自動完成關聯。",
++  "settings.officialboard.bridge.open_official": "打開 tokentracker.cc",
++  "settings.officialboard.bridge.status_label": "轉發状態",
++  "settings.officialboard.bridge.last_relay": "上次運行 {{ts}}",
++  "settings.officialboard.bridge.next_allowed": "官方允許下次上傳時間 {{ts}}",
++  "settings.officialboard.bridge.relay_now": "立即上傳",
++  "settings.officialboard.bridge.unlink": "取消關聯",
++  "settings.officialboard.bridge.error": "請求失敗：{{error}}",
++  "settings.officialboard.status.linked": "已關聯",
++  "settings.officialboard.status.ok": "已上傳",
++  "settings.officialboard.status.up_to_date": "已是最新",
++  "settings.officialboard.status.throttled": "等待官方上傳窗口",
++  "settings.officialboard.status.token_rejected": "官方拒絕了該設備，請重新關聯",
++  "settings.officialboard.status.error": "上次上傳失敗",
++  "leaderboard.maplex.source.current": "当前後端",
++  "leaderboard.maplex.source.maplex": "Maplex",
++  "leaderboard.maplex.source.official": "官方",
++  "leaderboard.maplex.preview.label": "預覽身份",
++  "leaderboard.maplex.preview.self": "我",
++  "leaderboard.maplex.preview.guest": "遊客",
++  "leaderboard.maplex.preview.custom": "指定用戶 ID",
++  "leaderboard.maplex.preview.custom_placeholder": "用戶 ID（uuid），回車生效",
++  "leaderboard.maplex.hint.linked": "已高亮你關聯的官方帳號。",
++  "leaderboard.maplex.hint.merged": "你的 Maplex 匯總數據已在本地插入預覽。",
++  "leaderboard.maplex.hint.link_cta": "上傳到官方排行榜"
+ }
+diff --git a/dashboard/src/content/i18n/zh/core.json b/dashboard/src/content/i18n/zh/core.json
+index 05f4306a4f648e2d2561c72c01ca1162a05df7b6..e6ae196eaa96bebc42161f35a93d8873a1769f4a 100644
+--- a/dashboard/src/content/i18n/zh/core.json
++++ b/dashboard/src/content/i18n/zh/core.json
+@@ -883,5 +883,62 @@
+   "settings.local_data.error.too_many_devices": "已达到导入数据上限，请先移除不再需要的来源。",
+   "settings.local_data.error.unknown_device": "这个导入来源已不存在。",
+   "settings.local_data.error.transfer_failed": "操作失败，请检查文件和本地应用后重试。",
+-  "settings.local_data.local_history_only": "离线快照不含会话记录。上下文分解需选择“本机”查看；项目、会话和效果分析始终只包含本机记录。"
++  "settings.local_data.local_history_only": "离线快照不含会话记录。上下文分解需选择“本机”查看；项目、会话和效果分析始终只包含本机记录。",
++  "settings.section.backend": "云端后端",
++  "settings.section.backend.description": "选择本应用同步到哪个 TokenTracker 云端。",
++  "settings.backend.current": "当前：{{url}}",
++  "settings.backend.choice.label": "后端",
++  "settings.backend.choice.hint": "Maplex 为默认自部署实例；官方为 tokentracker.cc。",
++  "settings.backend.preset.maplex": "Maplex",
++  "settings.backend.preset.official": "官方",
++  "settings.backend.preset.custom": "自定义",
++  "settings.backend.baseUrl.label": "API 地址",
++  "settings.backend.anonKey.label": "Anon Key",
++  "settings.backend.anonKey.hint": "后端的公开 anon key，切勿填写管理员 ik_ 密钥。",
++  "settings.backend.dashboardUrl.label": "仪表盘地址",
++  "settings.backend.relogin_hint": "每个后端各自保留登录状态，切回时自动恢复；首次使用的后端需登录一次，之后本机历史会上传到该后端。",
++  "settings.backend.save": "切换",
++  "settings.backend.saved": "已切换后端，正在重新加载…",
++  "settings.backend.save_error": "切换后端失败：{{error}}",
++  "settings.section.officialboard": "官方排行榜",
++  "settings.section.officialboard.description": "查看 tokentracker.cc 的排行榜，并把 Maplex 的汇总数据上传上去。",
++  "settings.officialboard.display_title": "排行榜显示",
++  "settings.officialboard.showOfficialBoard.label": "显示官方排行榜切换",
++  "settings.officialboard.showOfficialBoard.hint": "在排行榜页面增加 Maplex / 官方 切换。只读，不会上传任何数据。",
++  "settings.officialboard.mergeSelf.label": "把我插入官方排行榜",
++  "settings.officialboard.mergeSelf.hint": "你的账号不在官方榜上时，按 Maplex 汇总数据把你插到对应名次。仅本地预览，只有你能看到。",
++  "settings.officialboard.previewSwitcher.label": "“预览身份”选择器",
++  "settings.officialboard.previewSwitcher.hint": "以自己、游客或任意用户 ID 的视角查看排行榜，不切换软件登录的账户。",
++  "settings.officialboard.bridge_title": "上传到官方排行榜",
++  "settings.officialboard.bridge.label": "转发我的 Maplex 用量",
++  "settings.officialboard.bridge.hint": "Maplex 云端汇总你所有设备的数据，作为一台设备上传到一个官方 tokentracker.cc 账号。只需在 tokentracker.cc 上批准一次授权码即可关联。",
++  "settings.officialboard.bridge.hint_linked": "已关联。Maplex 云端每 30 分钟上传一次汇总数据；关闭即可暂停。",
++  "settings.officialboard.bridge.unavailable": "需要本应用同步到 Maplex 云端并已登录。",
++  "settings.officialboard.bridge.link": "关联官方账号",
++  "settings.officialboard.bridge.code": "授权码：{{code}}",
++  "settings.officialboard.bridge.code_hint": "打开 tokentracker.cc，用官方账号登录并批准此授权码，本页会自动完成关联。",
++  "settings.officialboard.bridge.open_official": "打开 tokentracker.cc",
++  "settings.officialboard.bridge.status_label": "转发状态",
++  "settings.officialboard.bridge.last_relay": "上次运行 {{ts}}",
++  "settings.officialboard.bridge.next_allowed": "官方允许下次上传时间 {{ts}}",
++  "settings.officialboard.bridge.relay_now": "立即上传",
++  "settings.officialboard.bridge.unlink": "取消关联",
++  "settings.officialboard.bridge.error": "请求失败：{{error}}",
++  "settings.officialboard.status.linked": "已关联",
++  "settings.officialboard.status.ok": "已上传",
++  "settings.officialboard.status.up_to_date": "已是最新",
++  "settings.officialboard.status.throttled": "等待官方上传窗口",
++  "settings.officialboard.status.token_rejected": "官方拒绝了该设备，请重新关联",
++  "settings.officialboard.status.error": "上次上传失败",
++  "leaderboard.maplex.source.current": "当前后端",
++  "leaderboard.maplex.source.maplex": "Maplex",
++  "leaderboard.maplex.source.official": "官方",
++  "leaderboard.maplex.preview.label": "预览身份",
++  "leaderboard.maplex.preview.self": "我",
++  "leaderboard.maplex.preview.guest": "游客",
++  "leaderboard.maplex.preview.custom": "指定用户 ID",
++  "leaderboard.maplex.preview.custom_placeholder": "用户 ID（uuid），回车生效",
++  "leaderboard.maplex.hint.linked": "已高亮你关联的官方账号。",
++  "leaderboard.maplex.hint.merged": "你的 Maplex 汇总数据已在本地插入预览。",
++  "leaderboard.maplex.hint.link_cta": "上传到官方排行榜"
+ }
+diff --git a/dashboard/src/pages/SettingsPage.jsx b/dashboard/src/pages/SettingsPage.jsx
+index a081b14f658810af453f153637fd447c36f584c0..665e9216e52369372d07de1e5161ce5bef063289 100644
+--- a/dashboard/src/pages/SettingsPage.jsx
++++ b/dashboard/src/pages/SettingsPage.jsx
+@@ -1,5 +1,8 @@
+ import React from "react";
+-import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Settings, UserRound } from "lucide-react";
++import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Server, Settings, Trophy, UserRound } from "lucide-react";
++import { BackendSection } from "../components/settings/BackendSection.jsx";
++import { OfficialBoardSection } from "../components/settings/OfficialBoardSection.jsx";
++import { useBackendSettings } from "../hooks/use-backend-settings.js";
+ import { useNavigate, useSearchParams } from "react-router-dom";
+ import { LimitsSettingsPanel } from "../components/LimitsSettingsPanel.jsx";
+ import { AccountSection } from "../components/settings/AccountSection.jsx";
+@@ -29,6 +32,8 @@ const SETTINGS_SECTION_IDS = {
+   APPEARANCE: "appearance",
+   NATIVE_APP: "native-app",
+   NETWORK: "network",
++  BACKEND: "backend",
++  LEADERBOARD: "leaderboard",
+   LOCAL_DATA: "local-data",
+   ACCOUNT: "account",
+   CLOUD: "cloud",
+@@ -65,6 +70,7 @@ export function SettingsPage() {
+   } = useNativeSettings();
+   const proxySettings = useProxySettings();
+   const { available: proxySettingsAvailable } = proxySettings;
++  const backendSettings = useBackendSettings();
+   const toastOnReset = nativeSettings?.toastOnReset !== false;
+   const confettiOnReset = nativeSettings?.confettiOnReset !== false;
+   const windowsNativeSettings =
+@@ -75,6 +81,7 @@ export function SettingsPage() {
+   const requestedSectionAvailable =
+     Object.values(SETTINGS_SECTION_IDS).includes(requestedSection) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.NATIVE_APP || nativeSettingsAvailable) &&
++    (requestedSection !== SETTINGS_SECTION_IDS.BACKEND || backendSettings.available) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.LOCAL_DATA || isLocalDashboardHost());
+   const activeSection = requestedSectionAvailable
+@@ -110,6 +117,16 @@ export function SettingsPage() {
+           content: <MenuBarSection />,
+         }]
+       : []),
++    ...(backendSettings.available && backendSettings.config
++      ? [{
++          id: SETTINGS_SECTION_IDS.BACKEND,
++          label: copy("settings.section.backend"),
++          description: copy("settings.section.backend.description"),
++          group: SETTINGS_GROUP_IDS.APP,
++          Icon: Server,
++          content: <BackendSection backendSettings={backendSettings} />,
++        }]
++      : []),
+     ...(proxySettingsAvailable
+       ? [{
+           id: SETTINGS_SECTION_IDS.NETWORK,
+@@ -136,6 +153,14 @@ export function SettingsPage() {
+       Icon: Cloud,
+       content: <CloudSection settings={accountSettings} active={activeSection === SETTINGS_SECTION_IDS.CLOUD} />,
+     },
++    {
++      id: SETTINGS_SECTION_IDS.LEADERBOARD,
++      label: copy("settings.section.officialboard"),
++      description: copy("settings.section.officialboard.description"),
++      group: SETTINGS_GROUP_IDS.PERSONAL,
++      Icon: Trophy,
++      content: activeSection === SETTINGS_SECTION_IDS.LEADERBOARD ? <OfficialBoardSection /> : null,
++    },
+     {
+       id: SETTINGS_SECTION_IDS.LIMITS,
+       label: copy("settings.section.limits"),
+diff --git a/scripts/validate-locale-coverage.cjs b/scripts/validate-locale-coverage.cjs
+index e9c26735c59c25883031620e331f39b601ac7feb..8ad7d9fb6e556a6dfbbf052be77cc41c9cc9d830 100644
+--- a/scripts/validate-locale-coverage.cjs
++++ b/scripts/validate-locale-coverage.cjs
+@@ -15,6 +15,7 @@ const REQUIRED_COLUMNS = ["key", "module", "page", "component", "slot", "text"];
+ // and model names, protocol abbreviations, or formatting-only labels. Keep
+ // this key-based so a newly added English sentence cannot silently pass.
+ const SOURCE_IDENTICAL_KEY_ALLOWLIST = [
++  /^(settings[.]backend[.]preset|leaderboard[.]maplex[.]source)[.]maplex$/,
+   /^landing[.]install[.]command$/,
+   /^(landing|share)[.]meta[.]/,
+   /^landing[.]cta[.]secondary$/,

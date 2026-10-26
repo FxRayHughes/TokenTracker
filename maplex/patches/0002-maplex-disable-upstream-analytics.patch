@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 2/6] maplex: disable upstream analytics
+
+
+diff --git a/dashboard/src/lib/analytics.js b/dashboard/src/lib/analytics.js
+index 2f3c0cfb6b81b56a87cf5a20d192cc64ead7f950..8ae27d1a60e8ccbd5b86c14a7e3104b1fae9b92f 100644
+--- a/dashboard/src/lib/analytics.js
++++ b/dashboard/src/lib/analytics.js
+@@ -54,6 +54,7 @@ export function initAnalytics() {
+   if (typeof window === "undefined") return;
+   // Vite dev server (5173 mock mode) and vitest must never emit events.
+   if (import.meta.env.DEV || import.meta.env.MODE === "test") return;
++  return; // maplex: analytics disabled in self-hosted builds
+ 
+   try {
+     const shell = resolveAnalyticsShell();

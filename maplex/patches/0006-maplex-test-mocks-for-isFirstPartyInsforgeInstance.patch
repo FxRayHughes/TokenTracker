@@ -1,0 +1,92 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 6/6] maplex: test mocks for isFirstPartyInsforgeInstance
+
+
+diff --git a/dashboard/src/components/settings/useAccountProfileSettings.cloud-sync.test.jsx b/dashboard/src/components/settings/useAccountProfileSettings.cloud-sync.test.jsx
+index aeb0af4d2f8965b3eb2a732d9eea18db7ddf857a..0a2687788532acf3e69c29eede9a9777c7de17b6 100644
+--- a/dashboard/src/components/settings/useAccountProfileSettings.cloud-sync.test.jsx
++++ b/dashboard/src/components/settings/useAccountProfileSettings.cloud-sync.test.jsx
+@@ -13,7 +13,7 @@ const state = vi.hoisted(() => ({ ownerId: "sync-owner", preference: false, sync
+ vi.mock("../../contexts/InsforgeAuthContext.jsx", () => ({ useInsforgeAuth: () => ({
+   enabled: true, signedIn: true, user: { id: state.ownerId }, getAccessToken: state.getAccessToken,
+ }) }));
+-vi.mock("../../lib/insforge-config", () => ({ getInsforgeRemoteUrl: () => "https://private.example", isOfficialInsforgeInstance: () => false }));
++vi.mock("../../lib/insforge-config", () => ({ getInsforgeRemoteUrl: () => "https://private.example", isOfficialInsforgeInstance: () => false, isFirstPartyInsforgeInstance: () => false }));
+ vi.mock("../../lib/api", () => ({ getPublicVisibility: vi.fn(), setPublicVisibility: vi.fn() }));
+ vi.mock("../../lib/cloud-sync", () => ({ runCloudUsageSyncNow: state.sync }));
+ vi.mock("../../lib/cloud-sync-prefs", () => ({
+diff --git a/dashboard/src/components/settings/useAccountProfileSettings.self-host.test.jsx b/dashboard/src/components/settings/useAccountProfileSettings.self-host.test.jsx
+index a4649517a6e75f5a8b3644003b0abf5d75e17cfd..6c24a465d9c8643ff1d3df3e3df37f1cb73ce307 100644
+--- a/dashboard/src/components/settings/useAccountProfileSettings.self-host.test.jsx
++++ b/dashboard/src/components/settings/useAccountProfileSettings.self-host.test.jsx
+@@ -6,7 +6,7 @@ const profile = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn() }));
+ vi.mock("../../contexts/InsforgeAuthContext.jsx", () => ({ useInsforgeAuth: () => ({
+   enabled: true, signedIn: true, user: { id: "private-user", email: "" }, getAccessToken: vi.fn(),
+ }) }));
+-vi.mock("../../lib/insforge-config", () => ({ getInsforgeRemoteUrl: () => "https://private.example", isOfficialInsforgeInstance: () => false }));
++vi.mock("../../lib/insforge-config", () => ({ getInsforgeRemoteUrl: () => "https://private.example", isOfficialInsforgeInstance: () => false, isFirstPartyInsforgeInstance: () => false }));
+ vi.mock("../../lib/api", () => ({ getPublicVisibility: profile.get, setPublicVisibility: profile.set }));
+ afterEach(cleanup);
+ it("does not query or publish a public profile on a free self-hosted instance", async () => {
+diff --git a/dashboard/src/contexts/__tests__/InsforgeAuthContext.account-owner.test.jsx b/dashboard/src/contexts/__tests__/InsforgeAuthContext.account-owner.test.jsx
+index 313008575b9b328ec8c8eaaaac9bea1bb0181a5c..554c5337c1554775481c0943cf05a849ce6a0a86 100644
+--- a/dashboard/src/contexts/__tests__/InsforgeAuthContext.account-owner.test.jsx
++++ b/dashboard/src/contexts/__tests__/InsforgeAuthContext.account-owner.test.jsx
+@@ -34,6 +34,7 @@ vi.mock("../../lib/insforge-config", () => ({
+   getInsforgeInstanceFingerprint: () => "https://account.example",
+   getInsforgeAnonKey: () => "public-anon",
+   isOfficialInsforgeInstance: () => false,
++  isFirstPartyInsforgeInstance: () => false,
+   INSFORGE_INSTANCE_CHANGED_EVENT: "tt.insforgeInstanceChanged",
+   isCurrentInsforgeClient: (value) => value === client,
+   shouldRestoreInsforgeSession: () => true,
+diff --git a/dashboard/src/contexts/__tests__/InsforgeAuthContext.initialization.test.jsx b/dashboard/src/contexts/__tests__/InsforgeAuthContext.initialization.test.jsx
+index 7e3dc28c7185d1c86cf360dd8b72c3c01a7e5848..c6a52ebb8c3317ee4dc44dd1f447ce87652a36ac 100644
+--- a/dashboard/src/contexts/__tests__/InsforgeAuthContext.initialization.test.jsx
++++ b/dashboard/src/contexts/__tests__/InsforgeAuthContext.initialization.test.jsx
+@@ -17,6 +17,7 @@ vi.mock("../../lib/insforge-config", () => ({
+   getInsforgeConfigurationError: () => state.configured ? null : "missing_backend_anon_key",
+   getInsforgeConnectionHost: () => null,
+   isOfficialInsforgeInstance: () => true,
++  isFirstPartyInsforgeInstance: () => true,
+   INSFORGE_INSTANCE_CHANGED_EVENT: "tt.insforgeInstanceChanged",
+   isCurrentInsforgeClient: () => true,
+   shouldRestoreInsforgeSession: () => true,
+diff --git a/dashboard/src/contexts/__tests__/InsforgeAuthContext.native-oauth.test.jsx b/dashboard/src/contexts/__tests__/InsforgeAuthContext.native-oauth.test.jsx
+index 6b2de96a9b977a4ba4cd588078e71b862be35287..960c700d1639f3858bb317bf0dd9272c38c44aee 100644
+--- a/dashboard/src/contexts/__tests__/InsforgeAuthContext.native-oauth.test.jsx
++++ b/dashboard/src/contexts/__tests__/InsforgeAuthContext.native-oauth.test.jsx
+@@ -16,6 +16,7 @@ vi.mock("../../lib/insforge-config", () => ({
+   getInsforgeConfigurationError: () => null,
+   getInsforgeConnectionHost: () => null,
+   isOfficialInsforgeInstance: () => true,
++  isFirstPartyInsforgeInstance: () => true,
+   INSFORGE_INSTANCE_CHANGED_EVENT: "tt.insforgeInstanceChanged",
+   isCurrentInsforgeClient: (...args) => currentClient(...args),
+   shouldRestoreInsforgeSession: () => true,
+diff --git a/dashboard/src/contexts/__tests__/InsforgeAuthContext.signout.test.jsx b/dashboard/src/contexts/__tests__/InsforgeAuthContext.signout.test.jsx
+index 9690cf8db6834596e00af279a37ca5694153cabd..c811574c8aeddbb20183ad94805c2e3556d8f0f8 100644
+--- a/dashboard/src/contexts/__tests__/InsforgeAuthContext.signout.test.jsx
++++ b/dashboard/src/contexts/__tests__/InsforgeAuthContext.signout.test.jsx
+@@ -16,6 +16,7 @@ vi.mock("../../lib/insforge-config", () => ({
+   getInsforgeConnectionHost: () => null,
+   getInsforgeRemoteUrl: () => "https://cloud.example",
+   isOfficialInsforgeInstance: () => true,
++  isFirstPartyInsforgeInstance: () => true,
+   isCurrentInsforgeClient: (value) => value === client,
+   shouldRestoreInsforgeSession: () => true,
+   allowInsforgeSessionRestore: vi.fn(),
+diff --git a/dashboard/src/contexts/__tests__/InsforgeAuthContext.test.jsx b/dashboard/src/contexts/__tests__/InsforgeAuthContext.test.jsx
+index 6ef6ccfddadb0c5e275eae0b2b7087d1f826c217..cd72dac38235a571c5b60f86602c06b2348e1216 100644
+--- a/dashboard/src/contexts/__tests__/InsforgeAuthContext.test.jsx
++++ b/dashboard/src/contexts/__tests__/InsforgeAuthContext.test.jsx
+@@ -6,6 +6,7 @@ vi.mock("../../lib/insforge-config", () => ({
+   getInsforgeConfigurationError: () => null,
+   getInsforgeConnectionHost: () => null,
+   isOfficialInsforgeInstance: () => true,
++  isFirstPartyInsforgeInstance: () => true,
+   INSFORGE_INSTANCE_CHANGED_EVENT: "tt.insforgeInstanceChanged",
+   isCurrentInsforgeClient: () => true,
+   shouldRestoreInsforgeSession: () => true,

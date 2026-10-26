@@ -1,0 +1,578 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 1/6] maplex: self-hosted backend by default, switchable
+ maplex/official/custom
+
+Default API, functions, dashboard URL and anon key point at insforge.maplex.top; the local server gets /functions/tokentracker-backend-config and keeps one login per backend.
+
+diff --git a/dashboard/src/components/settings/BackendSection.jsx b/dashboard/src/components/settings/BackendSection.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..cb59ffe06752b7ecf8cd324e8a0593decf829819
+--- /dev/null
++++ b/dashboard/src/components/settings/BackendSection.jsx
+@@ -0,0 +1,108 @@
++import React, { useEffect, useState } from "react";
++import { Loader2 } from "lucide-react";
++import { copy } from "../../lib/copy";
++import { Button } from "../../ui/components/Button.jsx";
++import { SectionCard, SegmentedControl, SettingsRow, SETTINGS_INPUT_CLASS } from "./Controls.jsx";
++
++// maplex: choose which TokenTracker cloud backend this installation syncs to.
++// Switching changes the backend instance; the local server then clears the
++// previous instance's device token and session, so the user signs in again.
++// Local usage data on this machine is never deleted.
++function draftFrom(config) {
++  return {
++    choice: config.choice,
++    baseUrl: config.custom?.baseUrl || "",
++    anonKey: config.custom?.anonKey || "",
++    dashboardUrl: config.custom?.dashboardUrl || "",
++  };
++}
++
++const PRESET_LABELS = {
++  maplex: () => copy("settings.backend.preset.maplex"),
++  official: () => copy("settings.backend.preset.official"),
++  custom: () => copy("settings.backend.preset.custom"),
++};
++
++export function BackendSection({ backendSettings }) {
++  const { config, save } = backendSettings;
++  const [draft, setDraft] = useState(() => draftFrom(config));
++  const [state, setState] = useState({ status: "idle", error: null });
++
++  useEffect(() => {
++    setDraft(draftFrom(config));
++  }, [config]);
++
++  const options = config.presets.map((preset) => ({
++    value: preset.id,
++    label: PRESET_LABELS[preset.id] ? PRESET_LABELS[preset.id]() : preset.id,
++  }));
++  const selectedPreset = config.presets.find((preset) => preset.id === draft.choice);
++  const dirty =
++    draft.choice !== config.choice ||
++    (draft.choice === "custom" &&
++      (draft.baseUrl !== (config.custom?.baseUrl || "") ||
++        draft.anonKey !== (config.custom?.anonKey || "") ||
++        draft.dashboardUrl !== (config.custom?.dashboardUrl || "")));
++
++  const onSave = async () => {
++    setState({ status: "saving", error: null });
++    try {
++      await save(draft.choice === "custom"
++        ? { choice: "custom", baseUrl: draft.baseUrl.trim(), anonKey: draft.anonKey.trim(), dashboardUrl: draft.dashboardUrl.trim() }
++        : { choice: draft.choice });
++      setState({ status: "saved", error: null });
++      // The dashboard reads the backend from /api/runtime-config.js at load.
++      setTimeout(() => window.location.reload(), 600);
++    } catch (error) {
++      setState({ status: "error", error: error?.message || String(error) });
++    }
++  };
++
++  function renderInput(key, placeholder) {
++    return <input
++      type="text"
++      value={draft[key]}
++      onChange={(event) => setDraft((prev) => ({ ...prev, [key]: event.target.value }))}
++      placeholder={placeholder}
++      autoComplete="off"
++      spellCheck={false}
++      aria-label={copy(`settings.backend.${key}.label`)}
++      className={`${SETTINGS_INPUT_CLASS} sm:w-80`}
++    />;
++  }
++  const customFields = draft.choice === "custom";
++  const presetRow = !customFields && selectedPreset;
++
++  return (
++    <SectionCard title={copy("settings.section.backend")} subtitle={copy("settings.backend.current", { url: config.active.baseUrl })}>
++      <SettingsRow
++        label={copy("settings.backend.choice.label")}
++        hint={copy("settings.backend.choice.hint")}
++        control={<SegmentedControl options={options} value={draft.choice} onChange={(choice) => setDraft((prev) => ({ ...prev, choice }))} />}
++      />
++      {customFields && (
++        <>
++          <SettingsRow label={copy("settings.backend.baseUrl.label")} control={renderInput("baseUrl", "https://")} />
++          <SettingsRow label={copy("settings.backend.anonKey.label")} hint={copy("settings.backend.anonKey.hint")} control={renderInput("anonKey", "")} />
++          <SettingsRow label={copy("settings.backend.dashboardUrl.label")} control={renderInput("dashboardUrl", "https://")} />
++        </>
++      )}
++      {presetRow && (
++        <SettingsRow label={copy("settings.backend.baseUrl.label")} control={<code className="text-xs text-oai-gray-600 dark:text-oai-gray-300">{selectedPreset.baseUrl}</code>} />
++      )}
++      <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
++        <p className="text-xs text-oai-gray-500 dark:text-oai-gray-400">
++          {state.status === "error"
++            ? <span role="alert" className="text-red-600 dark:text-red-400">{copy("settings.backend.save_error", { error: state.error })}</span>
++            : state.status === "saved"
++              ? copy("settings.backend.saved")
++              : copy("settings.backend.relogin_hint")}
++        </p>
++        <Button type="button" size="sm" onClick={onSave} disabled={!dirty || state.status === "saving"}>
++          {state.status === "saving" ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
++          {copy("settings.backend.save")}
++        </Button>
++      </div>
++    </SectionCard>
++  );
++}
+diff --git a/dashboard/src/components/settings/useAccountProfileSettings.js b/dashboard/src/components/settings/useAccountProfileSettings.js
+index 659c737884ac053a68037e29c6315596720c242c..89e8141a4a3f0e3fe7544172c38943f6645a6d7b 100644
+--- a/dashboard/src/components/settings/useAccountProfileSettings.js
++++ b/dashboard/src/components/settings/useAccountProfileSettings.js
+@@ -12,7 +12,7 @@ import {
+ import { copy } from "../../lib/copy";
+ import { normalizeGithubProfileUrl, pickDisplayName, pickEmail } from "./AccountSectionUtils.js";
+ import { clearCloudPromptFailure, recordCloudPromptFailure, readCloudPromptState, subscribeCloudPrompts, cloudPromptRevision } from "../../lib/cloud-prompt-policy.js";
+-import { isOfficialInsforgeInstance } from "../../lib/insforge-config";
++import { isFirstPartyInsforgeInstance, isOfficialInsforgeInstance } from "../../lib/insforge-config";
+ 
+ function warnSettingsAction(label, error) {
+   console.warn(`[tokentracker] settings ${label}:`, error);
+@@ -333,7 +333,7 @@ export function useAccountProfileSettings() {
+   useSyncExternalStore(subscribeCloudPrompts, cloudPromptRevision, () => 0);
+   const promptState = readCloudPromptState(auth.user?.id);
+   const selfHosted = promptState.membership?.status === "self_hosted" || promptState.catalog?.policy?.hosting_mode === "self_hosted";
+-  const publicProfileAvailable = !selfHosted && (isOfficialInsforgeInstance() || promptState.membership?.hosting_mode === "hosted");
++  const publicProfileAvailable = isFirstPartyInsforgeInstance() || (!selfHosted && (isOfficialInsforgeInstance() || promptState.membership?.hosting_mode === "hosted"));
+   const state = useProfileState(auth.user);
+   const cloudSync = useCloudSyncControl(auth.getAccessToken, auth.enabled, auth.signedIn, auth.user?.id);
+   useProfileLoad(auth.getAccessToken, auth.signedIn && publicProfileAvailable, state.loadSetters);
+diff --git a/dashboard/src/contexts/InsforgeAuthContext.jsx b/dashboard/src/contexts/InsforgeAuthContext.jsx
+index c18a2d5caaad5053acb0c0e3ff87fffbfc663fb6..0cee472b58f05db057b32a2a24eeec970b3d107e 100644
+--- a/dashboard/src/contexts/InsforgeAuthContext.jsx
++++ b/dashboard/src/contexts/InsforgeAuthContext.jsx
+@@ -7,7 +7,7 @@ import {
+   INSFORGE_INSTANCE_CHANGED_EVENT,
+   isCloudInsforgeConfigured,
+   isCurrentInsforgeClient,
+-  isOfficialInsforgeInstance,
++  isFirstPartyInsforgeInstance,
+   shouldRestoreInsforgeSession,
+ } from "../lib/insforge-config";
+ import { clearCloudDeviceSession, setCloudUsageReady } from "../lib/cloud-sync-prefs";
+@@ -285,7 +285,7 @@ export function InsforgeAuthProvider({ children }) {
+   const authDisplayName = useMemo(() => pickDisplayNameFromUser(user), [user]);
+ 
+   useEffect(() => {
+-    if (!user || !client || !isOfficialInsforgeInstance()) {
++    if (!user || !client || !isFirstPartyInsforgeInstance()) {
+       setCloudDisplayName(null);
+       setDisplayNameResolved(false);
+       return;
+diff --git a/dashboard/src/hooks/use-backend-settings.js b/dashboard/src/hooks/use-backend-settings.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..df1271c1ac2ca9ff6121d5579bf63ae3f36d3d9f
+--- /dev/null
++++ b/dashboard/src/hooks/use-backend-settings.js
+@@ -0,0 +1,64 @@
++import { useCallback, useEffect, useState } from "react";
++import { isLocalDashboardHost } from "../lib/host-mode";
++
++// maplex: read / switch the cloud backend the local CLI server talks to.
++// Only meaningful where a local server exists (dashboard served by the CLI or
++// embedded in the native apps); a public web deploy keeps its build backend.
++const BACKEND_CONFIG_PATH = "/functions/tokentracker-backend-config";
++
++async function authHeaders() {
++  const { getLocalApiAuthHeaders } = await import("../lib/local-api-auth");
++  return getLocalApiAuthHeaders();
++}
++
++function normalize(data) {
++  if (!data || typeof data.choice !== "string" || !Array.isArray(data.presets)) return null;
++  return data;
++}
++
++export function useBackendSettings() {
++  const [available, setAvailable] = useState(false);
++  const [config, setConfig] = useState(null);
++
++  useEffect(() => {
++    if (!isLocalDashboardHost()) return undefined;
++    let cancelled = false;
++    (async () => {
++      try {
++        const res = await fetch(BACKEND_CONFIG_PATH, { headers: { Accept: "application/json" }, cache: "no-store" });
++        const data = res.ok ? normalize(await res.json().catch(() => null)) : null;
++        if (!cancelled && data) {
++          setConfig(data);
++          setAvailable(true);
++        }
++      } catch {
++        /* no local server: section stays hidden */
++      }
++    })();
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
++  const save = useCallback(async (next) => {
++    const res = await fetch(BACKEND_CONFIG_PATH, {
++      method: "POST",
++      headers: { "Content-Type": "application/json", Accept: "application/json", ...(await authHeaders()) },
++      cache: "no-store",
++      body: JSON.stringify(next),
++    });
++    const data = await res.json().catch(() => null);
++    if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
++    const loaded = normalize(data);
++    // The local server put back this backend's saved sign-in. Mark it as the
++    // known instance so the reloaded dashboard restores that session instead
++    // of treating the switch as a sign-out.
++    if (loaded && data.restoredLogin && loaded.active?.baseUrl) {
++      try { localStorage.setItem("tt.insforge.instance", loaded.active.baseUrl); } catch { /* restore stays conservative */ }
++    }
++    if (loaded) setConfig(loaded);
++    return loaded;
++  }, []);
++
++  return { available, config, save };
++}
+diff --git a/dashboard/src/lib/insforge-config.ts b/dashboard/src/lib/insforge-config.ts
+index cdb24e1bd7b4870dabf2b7d95daa199f21d9cd99..3b405b94acbb2a99014df05d079bf4a6b3c4d37d 100644
+--- a/dashboard/src/lib/insforge-config.ts
++++ b/dashboard/src/lib/insforge-config.ts
+@@ -14,9 +14,9 @@ import { validateInsforgeDeployment } from "./insforge-deployment-config.mjs";
+  * (Previously this mistakenly hardcoded the full-access `ik_*` API key, which
+  * has admin access and must never reach the frontend.) Explicit env vars still win.
+  */
+-const PROD_INSFORGE_BASE_URL = "https://srctyff5.us-east.insforge.app";
++const PROD_INSFORGE_BASE_URL = "https://insforge.maplex.top";
+ const PROD_INSFORGE_ANON_KEY =
+-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNDU5NDd9.T0auta_IrVIh0uXW1bob5QSnzvsnJmN28r5XkSGEuQY";
++  "anon_ccd53a08643fee52b46be47046ce44c69d0cd34b";
+ 
+ export const INSFORGE_INSTANCE_CHANGED_EVENT = "tt.insforgeInstanceChanged";
+ const INSTANCE_STORAGE_KEY = "tt.insforge.instance";
+@@ -56,7 +56,11 @@ export function getInsforgeInstanceFingerprint(): string {
+   return getInsforgeConfiguration().baseUrl;
+ }
+ export function isOfficialInsforgeInstance(): boolean {
+-  return getInsforgeConfiguration().baseUrl === PROD_INSFORGE_BASE_URL;
++  return getInsforgeConfiguration().baseUrl === "https://srctyff5.us-east.insforge.app";
++}
++export function isFirstPartyInsforgeInstance(): boolean {
++  const baseUrl = getInsforgeConfiguration().baseUrl;
++  return baseUrl === PROD_INSFORGE_BASE_URL || baseUrl === "https://srctyff5.us-east.insforge.app";
+ }
+ export function getInsforgeConnectionHost(): string | null {
+   const config = getInsforgeConfiguration();
+diff --git a/dashboard/src/lib/insforge-deployment-config.mjs b/dashboard/src/lib/insforge-deployment-config.mjs
+index 32882da4a12a1db2f9cc21ab240f844a9e139047..ee0c38022595472a1ef7daebccd5bbdb6984016e 100644
+--- a/dashboard/src/lib/insforge-deployment-config.mjs
++++ b/dashboard/src/lib/insforge-deployment-config.mjs
+@@ -1,4 +1,4 @@
+-export const OFFICIAL_INSFORGE_URL = "https://srctyff5.us-east.insforge.app";
++export const OFFICIAL_INSFORGE_URL = "https://insforge.maplex.top";
+ 
+ export function isPublicAnonKey(value) {
+   if (typeof value !== "string" || !value.trim()) return false;
+diff --git a/dashboard/src/pages/DevicePage.jsx b/dashboard/src/pages/DevicePage.jsx
+index 38dadb0da76b2fa5b60d2563799ba6c7af3860cc..0188e09b0ded30000372d2f10ed6e56ab552facf 100644
+--- a/dashboard/src/pages/DevicePage.jsx
++++ b/dashboard/src/pages/DevicePage.jsx
+@@ -23,7 +23,7 @@ function buildGrantUrl() {
+   // VITE env var that initialized the client.
+   const baseUrl =
+     (import.meta.env && import.meta.env.VITE_INSFORGE_BASE_URL) ||
+-    "https://srctyff5.us-east.insforge.app";
++    "https://insforge.maplex.top";
+   return `${baseUrl.replace(/\/$/, "")}/functions/tokentracker-device-flow-grant`;
+ }
+ 
+diff --git a/src/commands/init.js b/src/commands/init.js
+index a68b8ac8b707bacac41a878072fdbaec47a4cd65..a7ea68b7bac80d55d4cb4f0cf472f899e654a59f 100644
+--- a/src/commands/init.js
++++ b/src/commands/init.js
+@@ -113,7 +113,7 @@ const ASCII_LOGO = [
+ ].join("\n");
+ 
+ const DIVIDER = "----------------------------------------------";
+-const DEFAULT_DASHBOARD_URL = "https://www.tokentracker.cc";
++const DEFAULT_DASHBOARD_URL = "https://tokentracker.maplex.top";
+ 
+ // Single source of truth for the welcome screen's provider count + sample list.
+ // test/discovery-metadata.test.js keeps this aligned with public tool copy.
+diff --git a/src/commands/sync.js b/src/commands/sync.js
+index 153f7add8eb7f733fdd040234fc7b585687f8de0..b4ce28d0ca07d0463db97d625c0792f80a0c9917 100644
+--- a/src/commands/sync.js
++++ b/src/commands/sync.js
+@@ -631,7 +631,7 @@ async function cmdSync(argv, context = {}) {
+     // token unless the local API has already minted a replacement from the
+     // user's current login session and passed it through the environment.
+     // Ingest is a whole-row upsert per bucket key, making replay idempotent.
+-    if (config && isLegacyInsforgeBaseUrl(config.baseUrl) &&
++    if (config && config.backendChoice !== "official" && isLegacyInsforgeBaseUrl(config.baseUrl) &&
+         !Object.hasOwn(process.env, "TOKENTRACKER_LOCAL_SYNC_DEVICE_TOKEN")) {
+       const priorQueueState = (await readJson(queueStatePath)) || {};
+       // Prepare the replay exactly once. The note survives successful batches,
+diff --git a/src/lib/function-url.js b/src/lib/function-url.js
+index 5fcc0375b333858d8437a14a5eae1fce5a71cabc..d1fa267c31cf55b917bef6c51e8a85c678881f79 100644
+--- a/src/lib/function-url.js
++++ b/src/lib/function-url.js
+@@ -6,7 +6,7 @@ const PROD_FUNCTIONS_URL = "https://srctyff5.function2.insforge.app";
+ // self-hosted API keeps its proxy route instead of sending credentials elsewhere.
+ function functionUrlFor(baseUrl, slug) {
+   const root = String(baseUrl || "").trim().replace(/\/$/, "");
+-  return root === DEFAULT_BASE_URL
++  return root === require("./maplex-backend").OFFICIAL_BACKEND.baseUrl
+     ? `${PROD_FUNCTIONS_URL}/${slug}`
+     : `${root}/functions/${slug}`;
+ }
+diff --git a/src/lib/local-api.js b/src/lib/local-api.js
+index 5f451ad3fe08ff5a0ef636fdf4ee695546be2cf4..65e349d32f0b8d0042f461e30bb308f31bd64a73 100644
+--- a/src/lib/local-api.js
++++ b/src/lib/local-api.js
+@@ -1695,6 +1695,55 @@ function createLocalApiHandler({ queuePath, serverVersion = null, trackerDataDir
+       json(res, { code: "instance_changed", error: "This session belongs to another backend instance. Sign in again." }, 409);
+       return true;
+     }
++    if (p === "/functions/tokentracker-backend-config") {
++      const maplexBackend = require("./maplex-backend");
++      const method = String(req.method || "GET").toUpperCase();
++      let current = {};
++      try { current = JSON.parse(fs.readFileSync(runtimeConfigPath, "utf8")) || {}; } catch { current = {}; }
++      if (method === "GET") { json(res, maplexBackend.describe(current, selectedRuntime), 200); return true; }
++      if (method !== "POST") { json(res, { error: "Method Not Allowed" }, 405); return true; }
++      if (!isAuthorizedLocalMutation(req)) { json(res, { error: "Unauthorized" }, 401); return true; }
++      let body;
++      try { body = await readJsonBody(req); } catch { json(res, { error: "Invalid JSON" }, 400); return true; }
++      const result = maplexBackend.applyChoice(current, body);
++      if (!result.ok) { json(res, { error: result.error }, 400); return true; }
++      // Keep one login per backend: stash the current backend's sign-in,
++      // then bring back the target backend's sign-in if it has one.
++      const vaultFiles = { "relay-cookies.json": cookiePath };
++      const fromBase = selectedRuntime.baseUrl;
++      const tokenBelongsHere = Boolean(current.deviceToken) &&
++        normalizeInstanceBaseUrl(current.deviceTokenBaseUrl) === fromBase;
++      if (!selectedRuntime.configurationError && (relayCookies.size > 0 || tokenBelongsHere)) {
++        persistRelayCookies();
++        maplexBackend.saveVault(trackerDataDir, fromBase, tokenBelongsHere ? current : {}, vaultFiles);
++      }
++      let nextConfig = maplexBackend.stripIdentity(result.config);
++      const probe = resolveRuntimeConfig({ config: nextConfig, env: process.env });
++      const targetBase = probe.configurationError ? "" : probe.baseUrl;
++      let restored = null;
++      if (targetBase && targetBase !== fromBase) {
++        restored = maplexBackend.restoreVault(trackerDataDir, targetBase, {});
++        if (restored) nextConfig = { ...nextConfig, ...restored };
++      } else if (targetBase === fromBase) {
++        nextConfig = result.config;
++      }
++      fs.mkdirSync(path.dirname(runtimeConfigPath), { recursive: true });
++      writeJsonAtomicSync(runtimeConfigPath, nextConfig);
++      try { fs.chmodSync(runtimeConfigPath, 0o600); } catch { /* best effort */ }
++      // getRuntime() notices the new instance and clears the old session...
++      const nextRuntime = getRuntime();
++      // ...then the target backend's own login cookies are put back.
++      if (restored && !nextRuntime.configurationError) {
++        maplexBackend.restoreVault(trackerDataDir, nextRuntime.baseUrl, vaultFiles);
++        relayCookies.clear();
++        try {
++          const saved = JSON.parse(fs.readFileSync(cookiePath, "utf8"));
++          for (const [k, v] of Object.entries(saved || {})) relayCookies.set(k, v);
++        } catch { /* no saved cookies: CLI token still restored */ }
++      }
++      json(res, { ...maplexBackend.describe(nextConfig, nextRuntime), restoredLogin: Boolean(restored) }, 200);
++      return true;
++    }
+     if (p === "/api/runtime-config.js") {
+       if (String(req.method).toUpperCase() !== "GET") { json(res, { error: "Method Not Allowed" }, 405); return true; }
+       const descriptor = { baseUrl: normalizeInstanceBaseUrl(selectedRuntime.baseUrl) || "",
+diff --git a/src/lib/maplex-backend.js b/src/lib/maplex-backend.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..e8dab140d57db83d60169cf058293814c8a4d185
+--- /dev/null
++++ b/src/lib/maplex-backend.js
+@@ -0,0 +1,146 @@
++"use strict";
++// maplex: switchable cloud backend for the local CLI server.
++//
++// config.json keeps the selected backend in `backendChoice`:
++//   "maplex"   → built-in defaults (our self-hosted InsForge). baseUrl/anonKey/
++//                dashboardUrl are removed so DEFAULT_* apply.
++//   "official" → upstream TokenTracker cloud. Its host is otherwise treated as
++//                a legacy host and auto-migrated; the explicit choice opts out.
++//   "custom"   → any InsForge instance with its own public anon key.
++// Changing the backend changes the instance fingerprint, so the local server
++// drops the previous instance's device token, relay session and upload cursor
++// (local usage data is untouched) and the user signs in again.
++
++const OFFICIAL_BACKEND = Object.freeze({
++  baseUrl: "https://srctyff5.us-east.insforge.app",
++  anonKey:
++    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNDU5NDd9.T0auta_IrVIh0uXW1bob5QSnzvsnJmN28r5XkSGEuQY",
++  dashboardUrl: "https://www.tokentracker.cc",
++});
++const OFFICIAL_HOST = new URL(OFFICIAL_BACKEND.baseUrl).hostname;
++const CHOICES = ["maplex", "official", "custom"];
++
++function explicitOfficial(config) {
++  return Boolean(config) && config.backendChoice === "official";
++}
++
++function presets() {
++  const { DEFAULT_BASE_URL, DEFAULT_DASHBOARD_URL } = require("./runtime-config");
++  return [
++    { id: "maplex", baseUrl: DEFAULT_BASE_URL, dashboardUrl: DEFAULT_DASHBOARD_URL },
++    { id: "official", baseUrl: OFFICIAL_BACKEND.baseUrl, dashboardUrl: OFFICIAL_BACKEND.dashboardUrl },
++    { id: "custom", baseUrl: "", dashboardUrl: "" },
++  ];
++}
++
++function currentChoice(config, runtime) {
++  const { DEFAULT_BASE_URL } = require("./runtime-config");
++  if (CHOICES.includes(config?.backendChoice)) return config.backendChoice;
++  if (runtime?.baseUrl === DEFAULT_BASE_URL) return "maplex";
++  if (runtime?.baseUrl === OFFICIAL_BACKEND.baseUrl) return "official";
++  return "custom";
++}
++
++function describe(config, runtime) {
++  const choice = currentChoice(config, runtime);
++  return {
++    choice,
++    presets: presets(),
++    active: {
++      baseUrl: runtime?.baseUrl || "",
++      dashboardUrl: runtime?.dashboardUrl || "",
++      configurationError: runtime?.configurationError || null,
++      signedIn: Boolean(runtime?.deviceToken),
++    },
++    custom: choice === "custom"
++      ? { baseUrl: config?.baseUrl || "", anonKey: config?.anonKey || "", dashboardUrl: config?.dashboardUrl || "" }
++      : null,
++  };
++}
++
++// Returns { ok, config } with the new config.json contents, or { ok:false, error }.
++function applyChoice(config, body) {
++  const { normalizeInstanceBaseUrl, isPublicAnonKey, DEFAULT_ANON_KEY } = require("./runtime-config");
++  const choice = body && typeof body.choice === "string" ? body.choice : "";
++  if (!CHOICES.includes(choice)) return { ok: false, error: "Unknown backend choice" };
++  const next = { ...config };
++  if (choice === "maplex") {
++    delete next.baseUrl; delete next.anonKey; delete next.dashboardUrl;
++  } else if (choice === "official") {
++    Object.assign(next, OFFICIAL_BACKEND);
++  } else {
++    const baseUrl = normalizeInstanceBaseUrl(String(body.baseUrl || "").trim());
++    if (!baseUrl) return { ok: false, error: "Backend URL must use HTTPS (or HTTP on localhost)." };
++    const anonKey = String(body.anonKey || "").trim();
++    if (!isPublicAnonKey(anonKey) || anonKey === DEFAULT_ANON_KEY) {
++      return { ok: false, error: "Use this backend's own public anon key (never an admin ik_ key)." };
++    }
++    const dashboardRaw = String(body.dashboardUrl || "").trim();
++    const dashboardUrl = dashboardRaw ? normalizeInstanceBaseUrl(dashboardRaw) : baseUrl;
++    if (!dashboardUrl) return { ok: false, error: "Dashboard URL must use HTTPS (or HTTP on localhost)." };
++    Object.assign(next, { baseUrl, anonKey, dashboardUrl });
++  }
++  next.backendChoice = choice;
++  return { ok: true, config: next };
++}
++
++// ── Per-backend login vault ──
++// Each backend keeps its own sign-in: before switching away, the current
++// backend's identity (CLI device token + relay login cookies) is stashed under
++// backends/<hash>/; switching back restores it, so neither side needs the
++// password again. The upload cursor is NOT restored: history is replayed to
++// the selected backend (idempotent upserts) so nothing synced meanwhile is
++// missed. Files are 0600 inside a 0700 directory.
++const IDENTITY_KEYS = ["deviceToken", "deviceTokenBaseUrl", "deviceId", "user_id", "device_login_at"];
++
++function vaultDir(trackerDataDir, baseUrl) {
++  const crypto = require("node:crypto");
++  const path = require("node:path");
++  const id = crypto.createHash("sha256").update(String(baseUrl || "")).digest("hex").slice(0, 16);
++  return path.join(trackerDataDir, "backends", id);
++}
++
++// files: { name: absolutePath }
++function saveVault(trackerDataDir, baseUrl, config, files) {
++  const fs = require("node:fs");
++  const path = require("node:path");
++  if (!baseUrl) return;
++  const dir = vaultDir(trackerDataDir, baseUrl);
++  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
++  const identity = { baseUrl };
++  for (const key of IDENTITY_KEYS) if (config?.[key] != null) identity[key] = config[key];
++  fs.writeFileSync(path.join(dir, "identity.json"), JSON.stringify(identity), { mode: 0o600 });
++  for (const [name, abs] of Object.entries(files)) {
++    const dst = path.join(dir, name);
++    try { fs.copyFileSync(abs, dst); fs.chmodSync(dst, 0o600); }
++    catch (error) { if (error.code === "ENOENT") { try { fs.unlinkSync(dst); } catch { /* none */ } } else throw error; }
++  }
++}
++
++// Returns the stored identity keys (or null) and copies stored files back.
++function restoreVault(trackerDataDir, baseUrl, files) {
++  const fs = require("node:fs");
++  const path = require("node:path");
++  const dir = vaultDir(trackerDataDir, baseUrl);
++  let identity = null;
++  try { identity = JSON.parse(fs.readFileSync(path.join(dir, "identity.json"), "utf8")); } catch { return null; }
++  if (!identity || identity.baseUrl !== baseUrl) return null;
++  for (const [name, abs] of Object.entries(files)) {
++    try { fs.copyFileSync(path.join(dir, name), abs); fs.chmodSync(abs, 0o600); }
++    catch (error) { if (error.code !== "ENOENT") throw error; }
++  }
++  const out = {};
++  for (const key of IDENTITY_KEYS) if (identity[key] != null) out[key] = identity[key];
++  return out;
++}
++
++function stripIdentity(config) {
++  const next = { ...config };
++  for (const key of IDENTITY_KEYS) delete next[key];
++  return next;
++}
++
++module.exports = {
++  OFFICIAL_BACKEND, OFFICIAL_HOST, explicitOfficial, describe, applyChoice,
++  saveVault, restoreVault, stripIdentity,
++};
+diff --git a/src/lib/runtime-config.js b/src/lib/runtime-config.js
+index ab2fc216293d2ceb3c2e2134c46352f875dda57f..ec113862224d8b99e8f9b921848494d32e14bd35 100644
+--- a/src/lib/runtime-config.js
++++ b/src/lib/runtime-config.js
+@@ -1,12 +1,12 @@
+-const DEFAULT_BASE_URL = "https://srctyff5.us-east.insforge.app";
++const DEFAULT_BASE_URL = "https://insforge.maplex.top";
+ // InsForge projects this product has retired. b46ug8xu was production until
+ // the 2026-04-19 migration to srctyff5 (0.5.67, commit 73f461b8); init
+ // preserves any persisted config.baseUrl, so installs initialized before the
+ // migration stayed pinned to it and kept uploading there until the old
+ // project's backend went dark on 2026-07-27 (HTTP 503 on every request).
+ // Persisted values naming these hosts must fall back to the current default.
+-const LEGACY_INSFORGE_HOSTS = new Set(["b46ug8xu.us-east.insforge.app"]);
+-const DEFAULT_DASHBOARD_URL = "https://www.tokentracker.cc";
++const LEGACY_INSFORGE_HOSTS = new Set(["srctyff5.us-east.insforge.app","srctyff5.function2.insforge.app","b46ug8xu.us-east.insforge.app"]);
++const DEFAULT_DASHBOARD_URL = "https://tokentracker.maplex.top";
+ const DEFAULT_HTTP_TIMEOUT_MS = 20_000;
+ // Public InsForge anon key (JWT, role=anon). Mirrors dashboard/src/lib/insforge-config.ts
+ // (PROD_INSFORGE_ANON_KEY) — public by design (ships in the browser bundle and
+@@ -15,14 +15,16 @@ const DEFAULT_HTTP_TIMEOUT_MS = 20_000;
+ // (Previously this mistakenly used the full-access `ik_*` API key, which has
+ // admin access and must never be shipped to clients.)
+ const DEFAULT_ANON_KEY =
+-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNDU5NDd9.T0auta_IrVIh0uXW1bob5QSnzvsnJmN28r5XkSGEuQY";
++  "anon_ccd53a08643fee52b46be47046ce44c69d0cd34b";
+ 
+ function resolveRuntimeConfig({ cli = {}, config = {}, env = process.env, defaults = {} } = {}) {
+   // Older Windows test runs could leak their fixture HOME and persist
+   // https://example.invalid into the user's real config.json. The test
+   // isolation bug is fixed, but existing installs must recover instead of
+   // backing off cloud uploads forever against the reserved placeholder host.
+-  const persistedBaseUrl = normalizePersistedBaseUrl(config.baseUrl);
++  const persistedBaseUrl = require("./maplex-backend").explicitOfficial(config)
++    ? normalizeString(config.baseUrl)
++    : normalizePersistedBaseUrl(config.baseUrl);
+   const baseUrl = pickString(
+     cli.baseUrl,
+     persistedBaseUrl,

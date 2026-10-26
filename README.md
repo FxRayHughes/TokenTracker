@@ -1,7 +1,7 @@
 # TokenTracker — maplex self-hosted builds
 
 This branch (`maplex`, the default branch of this fork) contains **no TokenTracker source**.
-It is a small overlay that every release applies on top of an upstream tag.
+It is a patch series (`maplex/patches/*.patch`, Spigot/Paper style) that every release applies on top of an upstream tag with `git am -3`.
 
 | Item | Value |
 | --- | --- |
@@ -10,7 +10,7 @@ It is a small overlay that every release applies on top of an upstream tag.
 | Client auto-update source | GitHub Releases of `FxRayHughes/TokenTracker` |
 | Upstream | `xiufengsun/TokenTracker` (only read from, never auto-installed) |
 
-## What the overlay changes (`maplex/apply.cjs`)
+## What the patches change
 
 - CLI and embedded server:
   - The default backend, anon key and dashboard URL point to maplex.
@@ -29,9 +29,21 @@ It is a small overlay that every release applies on top of an upstream tag.
   - Your own Maplex totals inserted into it as a local preview.
   - "Preview as": me, a guest or any user id, without switching the app account.
   - The server-side relay that uploads your summed Maplex usage to an official account (`maplex/server`).
-- Safety net: the script fails if any shipped source still references the official backend, or if an anchor moved upstream.
+- GitHub tokens: `gh*_` tokens are treated as opaque, so the new stateless JWT format (`ghs_…`, two dots, ~520 chars) is accepted.
+- Safety net (`maplex/finalize.cjs`): fails if any shipped source still references the official backend.
 
-Values live in `maplex/config.json`.
+Backend URL, anon key and dashboard URL are written directly in patch 0001.
+
+## Working on the patches
+
+```sh
+maplex/rebuild-patches.sh v1.4.9          # worktree ../../tt-1.4.9, git am -3 the series, re-export
+# on conflict: fix in the worktree, git add, git am --continue, re-run the same command
+# to change a patch: commit (or --fixup + rebase -i --autosquash) in the worktree, then
+maplex/rebuild-patches.sh v1.4.9 --export-only
+```
+
+`rerere` is enabled in the worktree, so a resolved conflict replays on the next upstream bump. Commit the updated `patches/` and push.
 
 ## How releases happen
 
@@ -61,7 +73,7 @@ gh workflow run release.yml --repo FxRayHughes/TokenTracker --ref maplex -f vers
 - Never rebuild an already published version: clients never re-download the same version number.
 - `maplex/verify-versions.cjs` enforces this split.
 
-If the overlay fails after an upstream change, fix the anchor in `maplex/apply.cjs`, push, and re-run.
+If a patch stops applying after an upstream change, run `maplex/rebuild-patches.sh <new tag>`, resolve, push the re-exported patches, and re-run.
 
 ## Server side
 
@@ -70,8 +82,8 @@ See [`maplex/server/README.md`](maplex/server/README.md): SQL shims, the officia
 ## Server dashboard
 
 ```bash
-git clone --depth 1 -b v1.4.3 https://github.com/xiufengsun/TokenTracker && cd TokenTracker
-node /path/to/maplex/apply.cjs . && npm ci --prefix dashboard
+git clone --depth 1 -b v1.4.8 https://github.com/xiufengsun/TokenTracker && cd TokenTracker
+bash /path/to/maplex/apply-patches.sh . && npm ci --prefix dashboard
 VITE_INSFORGE_BASE_URL=https://insforge.maplex.top VITE_INSFORGE_ANON_KEY=anon_ccd53a08643fee52b46be47046ce44c69d0cd34b npm run dashboard:build
 # upload dashboard/dist/* to /opt/1panel/www/sites/tokentracker.maplex.top/index/
 ```

@@ -1,8 +1,0 @@
-{
-  "backendUrl": "https://insforge.maplex.top",
-  "anonKey": "anon_ccd53a08643fee52b46be47046ce44c69d0cd34b",
-  "dashboardUrl": "https://tokentracker.maplex.top",
-  "releaseRepo": "FxRayHughes/TokenTracker",
-  "upstreamRepo": "xiufengsun/TokenTracker",
-  "officialHosts": ["srctyff5.us-east.insforge.app", "srctyff5.function2.insforge.app", "b46ug8xu.us-east.insforge.app"]
-}

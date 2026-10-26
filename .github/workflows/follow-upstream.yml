@@ -68,9 +68,9 @@ jobs:
           path: overlay
           persist-credentials: false
 
-      - name: Apply overlay (fails loudly if upstream moved an anchor)
+      - name: Apply maplex patches (fails loudly on a conflict)
         if: steps.find.outputs.version != ''
-        run: node overlay/maplex/apply.cjs upstream
+        run: bash overlay/maplex/apply-patches.sh upstream
 
       - name: Dispatch release build
         if: steps.find.outputs.version != ''

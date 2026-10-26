@@ -63,7 +63,7 @@ jobs:
       - name: Apply maplex overlay
         env:
           MAPLEX_RELEASE_VERSION: ${{ inputs.version }}
-        run: node _maplex/maplex/apply.cjs .
+        run: bash _maplex/maplex/apply-patches.sh .
 
       - uses: actions/setup-node@v7
         with:
