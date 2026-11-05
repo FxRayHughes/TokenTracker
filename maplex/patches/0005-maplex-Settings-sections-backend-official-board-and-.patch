@@ -1,18 +1,18 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 5/7] maplex: Settings sections (backend, official board) and
+Subject: [PATCH 5/8] maplex: Settings sections (backend, official board) and
  copy
 
 
 diff --git a/dashboard/src/content/copy.csv b/dashboard/src/content/copy.csv
-index b23192847291df2217a0f2788f387948095eebda..50c201c851dd0c250474986cf799c8c3d10e3b72 100644
+index 26d3dff107ff5aadfd4fcb5d433f22d65b951adc..e795493bf56d4d793ee7ff429c06463741bafa4b 100644
 --- a/dashboard/src/content/copy.csv
 +++ b/dashboard/src/content/copy.csv
-@@ -2138,3 +2138,60 @@ settings.local_data.error.too_many_devices,settings,SettingsPage,LocalDataSectio
- settings.local_data.error.unknown_device,settings,SettingsPage,LocalDataSection,unknown_device,This imported source is no longer available.,,active
- settings.local_data.error.transfer_failed,settings,SettingsPage,LocalDataSection,transfer_failed,"Transfer failed. Check the file and local app, then try again.",,active
- settings.local_data.local_history_only,dashboard,DashboardPage,LocalDataSection,local_history_only,"Offline snapshots omit session records. Select this device for context breakdown; project, session and outcome analyses always use this device's records.",,active
+@@ -2172,3 +2172,60 @@ settings.local_data.local_history_only,dashboard,DashboardPage,LocalDataSection,
+ leaderboard.profile_modal.window.lifetime,dashboard,LeaderboardProfileModal,StatCards,lifetime,"Totals: all time. Active days, daily average and breakdowns: {{from}} to {{to}}.",,active
+ leaderboard.profile_modal.window.period,dashboard,LeaderboardProfileModal,StatCards,period,Stats: {{from}} to {{to}}.,,active
+ leaderboard.profile_modal.window.average,dashboard,LeaderboardProfileModal,StatCards,average,"Window cost divided by {{days}} calendar days, including days without usage.",,active
 +settings.section.backend,ui,SettingsPage,BackendSection,backend,"Cloud backend",maplex,active
 +settings.section.backend.description,ui,SettingsPage,BackendSection,backend_description,"Choose which TokenTracker cloud this app syncs to.",maplex,active
 +settings.backend.current,ui,SettingsPage,BackendSection,current,"Current: {{url}}",maplex,active
@@ -71,10 +71,10 @@ index b23192847291df2217a0f2788f387948095eebda..50c201c851dd0c250474986cf799c8c3
 +leaderboard.maplex.hint.merged,ui,SettingsPage,BackendSection,hint_merged,"Your Maplex totals are inserted locally as a preview.",maplex,active
 +leaderboard.maplex.hint.link_cta,ui,SettingsPage,BackendSection,hint_link_cta,"Upload to the official board",maplex,active
 diff --git a/dashboard/src/content/i18n/zh-TW/core.json b/dashboard/src/content/i18n/zh-TW/core.json
-index 305dea4c2dd7e1cd1646f8832e06c914acac55e4..bf0dc8985818d126233b5fdacd9e9f3530392837 100644
+index f75fa9b5fefde519cc6164075b85573d1a9855b4..4fdf12e6c5f07e5ba1a8b450d0f76a09383ead3d 100644
 --- a/dashboard/src/content/i18n/zh-TW/core.json
 +++ b/dashboard/src/content/i18n/zh-TW/core.json
-@@ -828,5 +828,62 @@
+@@ -849,5 +849,62 @@
    "settings.local_data.error.too_many_devices": "已達匯入資料上限，請先移除不再需要的來源。",
    "settings.local_data.error.unknown_device": "此匯入來源已不存在。",
    "settings.local_data.error.transfer_failed": "操作失敗，請檢查檔案與本機應用程式後重試。",
@@ -139,10 +139,10 @@ index 305dea4c2dd7e1cd1646f8832e06c914acac55e4..bf0dc8985818d126233b5fdacd9e9f35
 +  "leaderboard.maplex.hint.link_cta": "上傳到官方排行榜"
  }
 diff --git a/dashboard/src/content/i18n/zh/core.json b/dashboard/src/content/i18n/zh/core.json
-index 6821b9ec53e8b222d058b63c6817a9f81dc60f3f..2689f9680aae1b7dbe1444d6f426a232d5e20ee2 100644
+index 210555b963706001968f5a938ee11d3dadae704f..f4bf7c98d5b00dd3e83f657a8508cdbd20099271 100644
 --- a/dashboard/src/content/i18n/zh/core.json
 +++ b/dashboard/src/content/i18n/zh/core.json
-@@ -887,5 +887,62 @@
+@@ -908,5 +908,62 @@
    "settings.local_data.error.too_many_devices": "已达到导入数据上限，请先移除不再需要的来源。",
    "settings.local_data.error.unknown_device": "这个导入来源已不存在。",
    "settings.local_data.error.transfer_failed": "操作失败，请检查文件和本地应用后重试。",
@@ -278,7 +278,7 @@ index a081b14f658810af453f153637fd447c36f584c0..665e9216e52369372d07de1e5161ce5b
        id: SETTINGS_SECTION_IDS.LIMITS,
        label: copy("settings.section.limits"),
 diff --git a/scripts/validate-locale-coverage.cjs b/scripts/validate-locale-coverage.cjs
-index 624b99757a738e258851523c26929870d3939551..7be85661ddd1d548f6d3a1d6dd70f84d906da6cc 100644
+index 5b45661149a2d6b35e8a7e0febdca361de679af2..f841578da8f2e5defc7e48fc3bcc8cbd57baeab6 100644
 --- a/scripts/validate-locale-coverage.cjs
 +++ b/scripts/validate-locale-coverage.cjs
 @@ -15,6 +15,7 @@ const REQUIRED_COLUMNS = ["key", "module", "page", "component", "slot", "text"];

@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 08:29:50 +0800
+Subject: [PATCH 8/8] maplex: official direct-functions 404 fallback stays on
+ the official backend
+
+fetchFunctionResponse retried a 404 from srctyff5.function2 against DEFAULT_BASE_URL, which maplex points at insforge.maplex.top, so official-backend credentials were replayed to maplex. Fall back to the official API instead. runtime-config test expects the maplex default.
+
+diff --git a/src/lib/function-url.js b/src/lib/function-url.js
+index d1fa267c31cf55b917bef6c51e8a85c678881f79..a9dda68f79699223f6fcd39e92c72270ea2c66b0 100644
+--- a/src/lib/function-url.js
++++ b/src/lib/function-url.js
+@@ -1,5 +1,3 @@
+-const { DEFAULT_BASE_URL } = require("./runtime-config");
+-
+ const PROD_FUNCTIONS_URL = "https://srctyff5.function2.insforge.app";
+ 
+ // Use only the production deployment verified by the platform. A custom or
+@@ -17,7 +15,9 @@ async function fetchFunctionResponse(url, init = {}, fetchImpl = fetch) {
+   const target = new URL(String(url));
+   if (response.status === 404 && (method === "GET" || method === "HEAD")
+       && target.origin === PROD_FUNCTIONS_URL) {
+-    const legacy = new URL(`${DEFAULT_BASE_URL}/functions${target.pathname}`);
++    // maplex: the direct deployment belongs to the official backend, so its
++    // fallback must stay there (never replay official credentials to maplex).
++    const legacy = new URL(`${require("./maplex-backend").OFFICIAL_BACKEND.baseUrl}/functions${target.pathname}`);
+     legacy.search = target.search;
+     return fetchImpl(legacy.toString(), init);
+   }
+diff --git a/test/runtime-config.test.js b/test/runtime-config.test.js
+index dec9416f7d52d4d5f28258264063d8163db94b1b..68c644b5116abfee4791f8e342f6388a80eb162f 100644
+--- a/test/runtime-config.test.js
++++ b/test/runtime-config.test.js
+@@ -35,7 +35,7 @@ test("resolveRuntimeConfig recovers from the leaked Windows test base URL", () =
+     env: {},
+   });
+ 
+-  assert.equal(recovered.baseUrl, "https://srctyff5.us-east.insforge.app");
++  assert.equal(recovered.baseUrl, "https://insforge.maplex.top"); // maplex default backend
+   assert.equal(recovered.sources.baseUrl, "default");
+ 
+   const explicit = resolveRuntimeConfig({

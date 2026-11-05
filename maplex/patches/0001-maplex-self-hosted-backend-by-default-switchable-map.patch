@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 1/7] maplex: self-hosted backend by default, switchable
+Subject: [PATCH 1/8] maplex: self-hosted backend by default, switchable
  maplex/official/custom
 
 Default API, functions, dashboard URL and anon key point at insforge.maplex.top; the local server gets /functions/tokentracker-backend-config and keeps one login per backend.
@@ -287,7 +287,7 @@ index 38dadb0da76b2fa5b60d2563799ba6c7af3860cc..0188e09b0ded30000372d2f10ed6e56a
  }
  
 diff --git a/src/commands/init.js b/src/commands/init.js
-index a68b8ac8b707bacac41a878072fdbaec47a4cd65..a7ea68b7bac80d55d4cb4f0cf472f899e654a59f 100644
+index 8ce6f6ff190a15304abb3e282b8d3f1883293cd2..b5feb1f9382c756fbeadc127caba31b4f051b766 100644
 --- a/src/commands/init.js
 +++ b/src/commands/init.js
 @@ -113,7 +113,7 @@ const ASCII_LOGO = [
@@ -300,10 +300,10 @@ index a68b8ac8b707bacac41a878072fdbaec47a4cd65..a7ea68b7bac80d55d4cb4f0cf472f899
  // Single source of truth for the welcome screen's provider count + sample list.
  // test/discovery-metadata.test.js keeps this aligned with public tool copy.
 diff --git a/src/commands/sync.js b/src/commands/sync.js
-index 153f7add8eb7f733fdd040234fc7b585687f8de0..b4ce28d0ca07d0463db97d625c0792f80a0c9917 100644
+index 69af35d54e163c242c410f2991ea0fcf5091f623..f2a3aad1c1a992169b21f63165224d2fe76dccf6 100644
 --- a/src/commands/sync.js
 +++ b/src/commands/sync.js
-@@ -631,7 +631,7 @@ async function cmdSync(argv, context = {}) {
+@@ -634,7 +634,7 @@ async function cmdSync(argv, context = {}) {
      // token unless the local API has already minted a replacement from the
      // user's current login session and passed it through the environment.
      // Ingest is a whole-row upsert per bucket key, making replay idempotent.
@@ -326,10 +326,10 @@ index 5fcc0375b333858d8437a14a5eae1fce5a71cabc..d1fa267c31cf55b917bef6c51e8a85c6
      : `${root}/functions/${slug}`;
  }
 diff --git a/src/lib/local-api.js b/src/lib/local-api.js
-index 5f451ad3fe08ff5a0ef636fdf4ee695546be2cf4..65e349d32f0b8d0042f461e30bb308f31bd64a73 100644
+index f103870f719f3c9d02dc7bf8e81c7f1d45692cce..eb5fffc903eab9df9652ac1f5dd2b23464aab05a 100644
 --- a/src/lib/local-api.js
 +++ b/src/lib/local-api.js
-@@ -1695,6 +1695,55 @@ function createLocalApiHandler({ queuePath, serverVersion = null, trackerDataDir
+@@ -1906,6 +1906,55 @@ function createLocalApiHandler({ queuePath, serverVersion = null, trackerDataDir
        json(res, { code: "instance_changed", error: "This session belongs to another backend instance. Sign in again." }, 409);
        return true;
      }

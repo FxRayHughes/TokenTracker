@@ -42,7 +42,10 @@ let failures = 0;
 const shipped = ["src", "bin", "dashboard/src", "TokenTrackerBar/TokenTrackerBar", "TokenTrackerWin",
   "TokenTrackerLinux/src", "TokenTrackerLinux/src-tauri/src"];
 const skipDirs = ["node_modules", "__tests__", "tests", "test", "dist", "bin", "obj", "target", "publish"];
-const offenders = [OFFICIAL_API.replace("https://", ""), OFFICIAL_FN.replace("https://", ""), OFFICIAL_ANON_TAIL];
+// Upstream release URLs: an updater reading them would replace this build
+// with the official one (e.g. a new updater file upstream adds).
+const offenders = [OFFICIAL_API.replace("https://", ""), OFFICIAL_FN.replace("https://", ""), OFFICIAL_ANON_TAIL,
+  "xiufengsun/TokenTracker/releases", "repos/xiufengsun/TokenTracker"];
 // Intentional references: legacy-host list, official functions origin, the
 // user-selectable "official" backend preset, and the read-only official board.
 const allowed = ["src/lib/runtime-config.js", "src/lib/function-url.js", "dashboard/src/lib/function-url.ts",

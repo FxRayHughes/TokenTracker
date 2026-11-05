@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:51:29 +0800
-Subject: [PATCH 7/7] =?UTF-8?q?maplex:=20accept=20stateless=20JWT-format?=
+Subject: [PATCH 7/8] =?UTF-8?q?maplex:=20accept=20stateless=20JWT-format?=
  =?UTF-8?q?=20GitHub=20tokens=20(ghs=5F=20=E2=80=A6=20two=20dots,=20~520?=
  =?UTF-8?q?=20chars)?=
 MIME-Version: 1.0
@@ -11,10 +11,10 @@ Content-Transfer-Encoding: 8bit
 GitHub App installation tokens move to a stateless JWT format. Treat gh*_ token bodies as opaque: allow '.', '-' and '_' and no length cap. See https://github.blog/changelog/2026-05-15-github-app-installation-tokens-per-request-override-header/
 
 diff --git a/src/lib/usage-limits.js b/src/lib/usage-limits.js
-index 1d2bca071035b9979b82cc00f86112bea66b7ca2..ff7d09ccb43a586bba156b3641eaa932f7eb95c3 100644
+index 0cff2780ffa5776a06122ea6da0bd6c9f9d37e8e..11ea8596770eae684a8e8255df04fb27dec0decc 100644
 --- a/src/lib/usage-limits.js
 +++ b/src/lib/usage-limits.js
-@@ -1730,7 +1730,10 @@ function decryptCopilotAuthDbToken(keyBase64, ciphertextHex) {
+@@ -1904,7 +1904,10 @@ function decryptCopilotAuthDbToken(keyBase64, ciphertextHex) {
  function isLikelyGithubOauthToken(token) {
    if (typeof token !== "string") return false;
    const trimmed = token.trim();

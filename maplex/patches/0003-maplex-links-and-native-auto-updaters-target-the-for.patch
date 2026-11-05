@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: maplex <maplex@users.noreply.github.com>
 Date: Mon, 26 Oct 2026 08:43:52 +0800
-Subject: [PATCH 3/7] maplex: links and native auto-updaters target the fork;
+Subject: [PATCH 3/8] maplex: links and native auto-updaters target the fork;
  allow X.Y.Z.N
 
 
@@ -32,25 +32,59 @@ index 25b6d4814207d037175980c97186db1d1088adc2..6d56531d3aaedd5720d54ac759c9a345
          }
      }
 diff --git a/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift b/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
-index 43267dfec5195e7a3cf5d6a2f2ae99deaebe3487..6d1e4083f86d2d53c256a3bbe65354524a282eec 100644
+index d252a92aed5659f529600335ddd438974bbfee5d..3701acf08d670fd5d95bf9d09c500ad90af8d60d 100644
 --- a/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
 +++ b/TokenTrackerBar/TokenTrackerBar/Services/UpdateChecker.swift
-@@ -6,8 +6,8 @@ final class UpdateChecker {
+@@ -6,7 +6,7 @@ final class UpdateChecker {
  
      static let shared = UpdateChecker()
  
--    private let repo = "xiufengsun/TokenTracker"
 -    private let releaseURL: String = "https://github.com/xiufengsun/TokenTracker/releases/latest"
-+    private let repo = "FxRayHughes/TokenTracker"
 +    private let releaseURL: String = "https://github.com/FxRayHughes/TokenTracker/releases/latest"
  
      /// Observable status for menu item display
      private(set) var statusText: String? = nil {
+diff --git a/TokenTrackerBar/TokenTrackerBar/Services/UpdateReleaseClient.swift b/TokenTrackerBar/TokenTrackerBar/Services/UpdateReleaseClient.swift
+index 7426fb4e033e44a2f865eb81190dc26c63ee29cc..30a645b65c0b7c9abbe653c637f656f8cfb33087 100644
+--- a/TokenTrackerBar/TokenTrackerBar/Services/UpdateReleaseClient.swift
++++ b/TokenTrackerBar/TokenTrackerBar/Services/UpdateReleaseClient.swift
+@@ -44,10 +44,10 @@ struct GitHubRelease: Decodable {
+ /// HTTP flow can be tested without launching the app.
+ final class UpdateReleaseClient {
+ 
+-    static let releasePageURL = "https://github.com/xiufengsun/TokenTracker/releases/latest"
+-    private static let apiURL = "https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest"
+-    private static let tagPath = "/xiufengsun/TokenTracker/releases/tag/"
+-    private static let downloadBase = "https://github.com/xiufengsun/TokenTracker/releases/download/"
++    static let releasePageURL = "https://github.com/FxRayHughes/TokenTracker/releases/latest"
++    private static let apiURL = "https://api.github.com/repos/FxRayHughes/TokenTracker/releases/latest"
++    private static let tagPath = "/FxRayHughes/TokenTracker/releases/tag/"
++    private static let downloadBase = "https://github.com/FxRayHughes/TokenTracker/releases/download/"
+     /// Single universal DMG built by release-dmg.yml; download URLs depend on
+     /// this stable name (see the PRODUCT_NAME comment in project.yml).
+     private static let dmgAssetName = "TokenTrackerBar.dmg"
+@@ -184,12 +184,13 @@ final class UpdateReleaseClient {
+             && url.fragment == nil
+     }
+ 
+-    /// Mirrors the Windows client's `Version.TryParse` gate: exactly three
+-    /// numeric parts, so prerelease/build metadata tags are rejected.
++    /// Mirrors the Windows client's `Version.TryParse` gate: three numeric
++    /// parts, or four for a maplex sub-release (X.Y.Z.N); prerelease/build
++    /// metadata tags are rejected.
+     private static func stableVersion(from tag: String) -> String? {
+         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+         let parts = version.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+-        guard parts.count == 3, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }) else {
++        guard parts.count == 3 || parts.count == 4, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }) else {
+             return nil
+         }
+         return version
 diff --git a/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift b/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
-index dc44c8455078fe2814da469e5f575ab22f9e9149..f06577b61790bca4b3748d8c7cd95be5d21a5d24 100644
+index 5b3a533c839ea26beff46bac74f5d5ec44010ec0..4c2ca07bbba9472d9256dd21800c3c83a687d34e 100644
 --- a/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
 +++ b/TokenTrackerBar/TokenTrackerBar/TokenTrackerBarApp.swift
-@@ -37,7 +37,7 @@ struct TokenTrackerBarApp: App {
+@@ -38,7 +38,7 @@ struct TokenTrackerBarApp: App {
                  #if !TOKENTRACKER_NATIVE_QA
                  CommandGroup(replacing: .help) {
                      Button(Strings.menuHelp) {
@@ -90,12 +124,52 @@ index 860d5d832e7f7431780bca5b017ecc7ddfbddf8b..e8e172ededb5d5000682ab53f65626c4
          var request = URLRequest(url: url, timeoutInterval: 10)
          request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
          Task {
+diff --git a/TokenTrackerBar/TokenTrackerBarTests/UpdateReleaseClientTests.swift b/TokenTrackerBar/TokenTrackerBarTests/UpdateReleaseClientTests.swift
+index 23caf90eb5bbafdd326c653fe8e975ffdcde3136..d25cd2da0d875b2af4228d8a102d0a6c8c548c7b 100644
+--- a/TokenTrackerBar/TokenTrackerBarTests/UpdateReleaseClientTests.swift
++++ b/TokenTrackerBar/TokenTrackerBarTests/UpdateReleaseClientTests.swift
+@@ -6,10 +6,10 @@ import XCTest
+ /// fallback, and the guardrails around both.
+ final class UpdateReleaseClientTests: XCTestCase {
+ 
+-    private static let apiURL = "https://api.github.com/repos/xiufengsun/TokenTracker/releases/latest"
+-    private static let pageURL = "https://github.com/xiufengsun/TokenTracker/releases/latest"
+-    private static let tagURL = "https://github.com/xiufengsun/TokenTracker/releases/tag/v1.3.9"
+-    private static let dmgURL = "https://github.com/xiufengsun/TokenTracker/releases/download/v1.3.9/TokenTrackerBar.dmg"
++    private static let apiURL = "https://api.github.com/repos/FxRayHughes/TokenTracker/releases/latest"
++    private static let pageURL = "https://github.com/FxRayHughes/TokenTracker/releases/latest"
++    private static let tagURL = "https://github.com/FxRayHughes/TokenTracker/releases/tag/v1.3.9"
++    private static let dmgURL = "https://github.com/FxRayHughes/TokenTracker/releases/download/v1.3.9/TokenTrackerBar.dmg"
+     private static let epoch = Date(timeIntervalSince1970: 1_770_000_000)
+ 
+     private final class Clock {
+@@ -223,15 +223,15 @@ final class UpdateReleaseClientTests: XCTestCase {
+ 
+     func testFallbackRejectsUnexpectedRedirectsAndInvalidTags() async throws {
+         let badRedirects = [
+-            "https://example.test/xiufengsun/TokenTracker/releases/tag/v1.3.9",
+-            "http://github.com/xiufengsun/TokenTracker/releases/tag/v1.3.9",
++            "https://example.test/FxRayHughes/TokenTracker/releases/tag/v1.3.9",
++            "http://github.com/FxRayHughes/TokenTracker/releases/tag/v1.3.9",
+             "https://github.com/another/repo/releases/tag/v1.3.9",
+             // Same path as the entry point but with a query, so the stub serves
+             // it as a terminal 200 (a literal self-redirect would loop); the
+             // client must still reject it because it is not a tag page.
+-            "https://github.com/xiufengsun/TokenTracker/releases/latest?ref=x",
+-            "https://github.com/xiufengsun/TokenTracker/releases/tag/v1.3.9-rc.1",
+-            "https://github.com/xiufengsun/TokenTracker/releases/tag/v1.3.9/extra",
++            "https://github.com/FxRayHughes/TokenTracker/releases/latest?ref=x",
++            "https://github.com/FxRayHughes/TokenTracker/releases/tag/v1.3.9-rc.1",
++            "https://github.com/FxRayHughes/TokenTracker/releases/tag/v1.3.9/extra",
+         ]
+         for redirect in badRedirects {
+             StubURLProtocol.reset()
 diff --git a/TokenTrackerWin/Constants.cs b/TokenTrackerWin/Constants.cs
-index cd500b9a92ef3a620662acba3fa72c74e62a1b1e..8c3f77eccc8056e89b3c5e314a7b760101928a79 100644
+index 8ca068b0115341c0d298dcd0beab9e354b40fc68..30049a5ecd8827327220c3f266b49414db9a45dd 100644
 --- a/TokenTrackerWin/Constants.cs
 +++ b/TokenTrackerWin/Constants.cs
-@@ -18,7 +18,7 @@ internal static class Constants
-     public const int StartupTimeoutSeconds = 20;
+@@ -24,7 +24,7 @@ internal static class Constants
+     public const int StartupTimeoutSeconds = 90;
  
      public const string AppDisplayName = "TokenTracker";
 -    public const string GitHubUrl = "https://github.com/xiufengsun/TokenTracker";
