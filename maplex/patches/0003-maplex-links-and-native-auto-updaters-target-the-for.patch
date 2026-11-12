@@ -19,10 +19,10 @@ index cb0a8ff3aa4b70eebcb436ec3acc9e6e4c1d3550..e521f4d23818b98a62cfb84a75b5978b
              }
          case "openWidgetGallery":
 diff --git a/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift b/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
-index 25b6d4814207d037175980c97186db1d1088adc2..6d56531d3aaedd5720d54ac759c9a345a1346234 100644
+index 7abedb288e23a5d2f4c7cff9df8c10f48b1e757c..147b265c31afbef65c65c1cc893b817e5d324560 100644
 --- a/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
 +++ b/TokenTrackerBar/TokenTrackerBar/Services/StatusBarController.swift
-@@ -1363,7 +1363,7 @@ final class StatusBarController: NSObject {
+@@ -1411,7 +1411,7 @@ final class StatusBarController: NSObject {
      }
  
      @objc private func openGitHub() {

@@ -30,6 +30,7 @@ It is a patch series (`maplex/patches/*.patch`, Spigot/Paper style) that every r
   - "Preview as": me, a guest or any user id, without switching the app account.
   - The server-side relay that uploads your summed Maplex usage to an official account (`maplex/server`).
 - GitHub tokens: `gh*_` tokens are treated as opaque, so the new stateless JWT format (`ghs_…`, two dots, ~520 chars) is accepted.
+- UI copy (`maplex/copy/`): our copy.csv rows and zh/zh-TW strings are appended by `maplex/finalize.cjs` instead of a patch, because upstream appends to those files every release and a patch hunk at their end conflicts each time. It fails if upstream starts defining one of our keys differently.
 - Safety net (`maplex/finalize.cjs`): fails if any shipped source still references the official backend.
 
 Backend URL, anon key and dashboard URL are written directly in patch 0001.

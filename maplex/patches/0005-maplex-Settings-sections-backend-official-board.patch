@@ -1,0 +1,90 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: maplex <maplex@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 08:43:52 +0800
+Subject: [PATCH 5/8] maplex: Settings sections (backend, official board)
+
+Copy strings live in maplex/copy/ and are appended by finalize.cjs, so upstream's copy.csv growth never conflicts.
+
+diff --git a/dashboard/src/pages/SettingsPage.jsx b/dashboard/src/pages/SettingsPage.jsx
+index a081b14f658810af453f153637fd447c36f584c0..665e9216e52369372d07de1e5161ce5bef063289 100644
+--- a/dashboard/src/pages/SettingsPage.jsx
++++ b/dashboard/src/pages/SettingsPage.jsx
+@@ -1,5 +1,8 @@
+ import React from "react";
+-import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Settings, UserRound } from "lucide-react";
++import { Cloud, FlaskConical, Gauge, Globe, Monitor, Palette, Server, Settings, Trophy, UserRound } from "lucide-react";
++import { BackendSection } from "../components/settings/BackendSection.jsx";
++import { OfficialBoardSection } from "../components/settings/OfficialBoardSection.jsx";
++import { useBackendSettings } from "../hooks/use-backend-settings.js";
+ import { useNavigate, useSearchParams } from "react-router-dom";
+ import { LimitsSettingsPanel } from "../components/LimitsSettingsPanel.jsx";
+ import { AccountSection } from "../components/settings/AccountSection.jsx";
+@@ -29,6 +32,8 @@ const SETTINGS_SECTION_IDS = {
+   APPEARANCE: "appearance",
+   NATIVE_APP: "native-app",
+   NETWORK: "network",
++  BACKEND: "backend",
++  LEADERBOARD: "leaderboard",
+   LOCAL_DATA: "local-data",
+   ACCOUNT: "account",
+   CLOUD: "cloud",
+@@ -65,6 +70,7 @@ export function SettingsPage() {
+   } = useNativeSettings();
+   const proxySettings = useProxySettings();
+   const { available: proxySettingsAvailable } = proxySettings;
++  const backendSettings = useBackendSettings();
+   const toastOnReset = nativeSettings?.toastOnReset !== false;
+   const confettiOnReset = nativeSettings?.confettiOnReset !== false;
+   const windowsNativeSettings =
+@@ -75,6 +81,7 @@ export function SettingsPage() {
+   const requestedSectionAvailable =
+     Object.values(SETTINGS_SECTION_IDS).includes(requestedSection) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.NATIVE_APP || nativeSettingsAvailable) &&
++    (requestedSection !== SETTINGS_SECTION_IDS.BACKEND || backendSettings.available) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.NETWORK || proxySettingsAvailable) &&
+     (requestedSection !== SETTINGS_SECTION_IDS.LOCAL_DATA || isLocalDashboardHost());
+   const activeSection = requestedSectionAvailable
+@@ -110,6 +117,16 @@ export function SettingsPage() {
+           content: <MenuBarSection />,
+         }]
+       : []),
++    ...(backendSettings.available && backendSettings.config
++      ? [{
++          id: SETTINGS_SECTION_IDS.BACKEND,
++          label: copy("settings.section.backend"),
++          description: copy("settings.section.backend.description"),
++          group: SETTINGS_GROUP_IDS.APP,
++          Icon: Server,
++          content: <BackendSection backendSettings={backendSettings} />,
++        }]
++      : []),
+     ...(proxySettingsAvailable
+       ? [{
+           id: SETTINGS_SECTION_IDS.NETWORK,
+@@ -136,6 +153,14 @@ export function SettingsPage() {
+       Icon: Cloud,
+       content: <CloudSection settings={accountSettings} active={activeSection === SETTINGS_SECTION_IDS.CLOUD} />,
+     },
++    {
++      id: SETTINGS_SECTION_IDS.LEADERBOARD,
++      label: copy("settings.section.officialboard"),
++      description: copy("settings.section.officialboard.description"),
++      group: SETTINGS_GROUP_IDS.PERSONAL,
++      Icon: Trophy,
++      content: activeSection === SETTINGS_SECTION_IDS.LEADERBOARD ? <OfficialBoardSection /> : null,
++    },
+     {
+       id: SETTINGS_SECTION_IDS.LIMITS,
+       label: copy("settings.section.limits"),
+diff --git a/scripts/validate-locale-coverage.cjs b/scripts/validate-locale-coverage.cjs
+index 0bd45150c1f1bc63139aedb5904193f64593fac0..47df4d11abbd4006140cc6786a62f34f06e794b7 100644
+--- a/scripts/validate-locale-coverage.cjs
++++ b/scripts/validate-locale-coverage.cjs
+@@ -15,6 +15,7 @@ const REQUIRED_COLUMNS = ["key", "module", "page", "component", "slot", "text"];
+ // and model names, protocol abbreviations, or formatting-only labels. Keep
+ // this key-based so a newly added English sentence cannot silently pass.
+ const SOURCE_IDENTICAL_KEY_ALLOWLIST = [
++  /^(settings[.]backend[.]preset|leaderboard[.]maplex[.]source)[.]maplex$/,
+   /^landing[.]install[.]command$/,
+   /^(landing|share)[.]meta[.]/,
+   /^landing[.]cta[.]secondary$/,

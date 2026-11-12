@@ -2,3 +2,4 @@
 *.patch -text
 *.sh text eol=lf
 *.cjs text eol=lf
+maplex/copy/* text eol=lf

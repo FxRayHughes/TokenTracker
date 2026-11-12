@@ -11,10 +11,10 @@ Content-Transfer-Encoding: 8bit
 GitHub App installation tokens move to a stateless JWT format. Treat gh*_ token bodies as opaque: allow '.', '-' and '_' and no length cap. See https://github.blog/changelog/2026-05-15-github-app-installation-tokens-per-request-override-header/
 
 diff --git a/src/lib/usage-limits.js b/src/lib/usage-limits.js
-index 0cff2780ffa5776a06122ea6da0bd6c9f9d37e8e..11ea8596770eae684a8e8255df04fb27dec0decc 100644
+index 64d9cdd12ede619113b47c7e86f0ba8a8e3b0b00..43494ce1755f25c225737e909d10a14a73a02f6e 100644
 --- a/src/lib/usage-limits.js
 +++ b/src/lib/usage-limits.js
-@@ -1904,7 +1904,10 @@ function decryptCopilotAuthDbToken(keyBase64, ciphertextHex) {
+@@ -1991,7 +1991,10 @@ function decryptCopilotAuthDbToken(keyBase64, ciphertextHex) {
  function isLikelyGithubOauthToken(token) {
    if (typeof token !== "string") return false;
    const trimmed = token.trim();

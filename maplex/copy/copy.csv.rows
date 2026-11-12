@@ -1,0 +1,57 @@
+settings.section.backend,ui,SettingsPage,BackendSection,backend,"Cloud backend",maplex,active
+settings.section.backend.description,ui,SettingsPage,BackendSection,backend_description,"Choose which TokenTracker cloud this app syncs to.",maplex,active
+settings.backend.current,ui,SettingsPage,BackendSection,current,"Current: {{url}}",maplex,active
+settings.backend.choice.label,ui,SettingsPage,BackendSection,choice_label,"Backend",maplex,active
+settings.backend.choice.hint,ui,SettingsPage,BackendSection,choice_hint,"Maplex is the self-hosted default; Official is tokentracker.cc.",maplex,active
+settings.backend.preset.maplex,ui,SettingsPage,BackendSection,preset_maplex,"Maplex",maplex,active
+settings.backend.preset.official,ui,SettingsPage,BackendSection,preset_official,"Official",maplex,active
+settings.backend.preset.custom,ui,SettingsPage,BackendSection,preset_custom,"Custom",maplex,active
+settings.backend.baseUrl.label,ui,SettingsPage,BackendSection,baseUrl_label,"API URL",maplex,active
+settings.backend.anonKey.label,ui,SettingsPage,BackendSection,anonKey_label,"Anon key",maplex,active
+settings.backend.anonKey.hint,ui,SettingsPage,BackendSection,anonKey_hint,"The backend's public anon key. Never paste an admin ik_ key.",maplex,active
+settings.backend.dashboardUrl.label,ui,SettingsPage,BackendSection,dashboardUrl_label,"Dashboard URL",maplex,active
+settings.backend.relogin_hint,ui,SettingsPage,BackendSection,relogin_hint,"Each backend keeps its own sign-in: switching back restores it. A backend you have never used asks you to sign in once; local history is then uploaded to it.",maplex,active
+settings.backend.save,ui,SettingsPage,BackendSection,save,"Switch",maplex,active
+settings.backend.saved,ui,SettingsPage,BackendSection,saved,"Backend switched. Reloading…",maplex,active
+settings.backend.save_error,ui,SettingsPage,BackendSection,save_error,"Could not switch backend: {{error}}",maplex,active
+settings.section.officialboard,ui,SettingsPage,BackendSection,officialboard,"Official leaderboard",maplex,active
+settings.section.officialboard.description,ui,SettingsPage,BackendSection,officialboard_description,"Show tokentracker.cc's leaderboard and send your Maplex totals to it.",maplex,active
+settings.officialboard.display_title,ui,SettingsPage,BackendSection,display_title,"Leaderboard display",maplex,active
+settings.officialboard.showOfficialBoard.label,ui,SettingsPage,BackendSection,showOfficialBoard_label,"Official leaderboard tab",maplex,active
+settings.officialboard.showOfficialBoard.hint,ui,SettingsPage,BackendSection,showOfficialBoard_hint,"Adds a Maplex / Official switch on the leaderboard page. Read-only; nothing is uploaded.",maplex,active
+settings.officialboard.mergeSelf.label,ui,SettingsPage,BackendSection,mergeSelf_label,"Insert me into the official board",maplex,active
+settings.officialboard.mergeSelf.hint,ui,SettingsPage,BackendSection,mergeSelf_hint,"When your account is not on the official board, show your Maplex totals at the rank they would have. Only you see this preview.",maplex,active
+settings.officialboard.previewSwitcher.label,ui,SettingsPage,BackendSection,previewSwitcher_label,"“Preview as” selector",maplex,active
+settings.officialboard.previewSwitcher.hint,ui,SettingsPage,BackendSection,previewSwitcher_hint,"View the leaderboard as yourself, as a guest or as any user id, without switching the app's account.",maplex,active
+settings.officialboard.bridge_title,ui,SettingsPage,BackendSection,bridge_title,"Upload to the official leaderboard",maplex,active
+settings.officialboard.bridge.label,ui,SettingsPage,BackendSection,bridge_label,"Relay my Maplex usage",maplex,active
+settings.officialboard.bridge.hint,ui,SettingsPage,BackendSection,bridge_hint,"The Maplex cloud sums all your devices and uploads the totals to an official tokentracker.cc account as one device. Link once by approving a code on tokentracker.cc.",maplex,active
+settings.officialboard.bridge.hint_linked,ui,SettingsPage,BackendSection,bridge_hint_linked,"Linked. The Maplex cloud uploads your summed usage every 30 minutes; turn off to pause.",maplex,active
+settings.officialboard.bridge.unavailable,ui,SettingsPage,BackendSection,bridge_unavailable,"Available when this app syncs to the Maplex cloud and you are signed in.",maplex,active
+settings.officialboard.bridge.link,ui,SettingsPage,BackendSection,bridge_link,"Link official account",maplex,active
+settings.officialboard.bridge.code,ui,SettingsPage,BackendSection,bridge_code,"Code: {{code}}",maplex,active
+settings.officialboard.bridge.code_hint,ui,SettingsPage,BackendSection,bridge_code_hint,"Open tokentracker.cc, sign in with the official account and approve this code. This page finishes by itself.",maplex,active
+settings.officialboard.bridge.open_official,ui,SettingsPage,BackendSection,bridge_open_official,"Open tokentracker.cc",maplex,active
+settings.officialboard.bridge.status_label,ui,SettingsPage,BackendSection,bridge_status_label,"Relay status",maplex,active
+settings.officialboard.bridge.last_relay,ui,SettingsPage,BackendSection,bridge_last_relay,"last run {{ts}}",maplex,active
+settings.officialboard.bridge.next_allowed,ui,SettingsPage,BackendSection,bridge_next_allowed,"official allows the next upload after {{ts}}",maplex,active
+settings.officialboard.bridge.relay_now,ui,SettingsPage,BackendSection,bridge_relay_now,"Upload now",maplex,active
+settings.officialboard.bridge.unlink,ui,SettingsPage,BackendSection,bridge_unlink,"Unlink",maplex,active
+settings.officialboard.bridge.error,ui,SettingsPage,BackendSection,bridge_error,"Request failed: {{error}}",maplex,active
+settings.officialboard.status.linked,ui,SettingsPage,BackendSection,status_linked,"Linked",maplex,active
+settings.officialboard.status.ok,ui,SettingsPage,BackendSection,status_ok,"Uploaded",maplex,active
+settings.officialboard.status.up_to_date,ui,SettingsPage,BackendSection,status_up_to_date,"Up to date",maplex,active
+settings.officialboard.status.throttled,ui,SettingsPage,BackendSection,status_throttled,"Waiting for the official upload window",maplex,active
+settings.officialboard.status.token_rejected,ui,SettingsPage,BackendSection,status_token_rejected,"Official account rejected the device; link again",maplex,active
+settings.officialboard.status.error,ui,SettingsPage,BackendSection,status_error,"Last upload failed",maplex,active
+leaderboard.maplex.source.current,ui,SettingsPage,BackendSection,source_current,"This backend",maplex,active
+leaderboard.maplex.source.maplex,ui,SettingsPage,BackendSection,source_maplex,"Maplex",maplex,active
+leaderboard.maplex.source.official,ui,SettingsPage,BackendSection,source_official,"Official",maplex,active
+leaderboard.maplex.preview.label,ui,SettingsPage,BackendSection,preview_label,"Preview as",maplex,active
+leaderboard.maplex.preview.self,ui,SettingsPage,BackendSection,preview_self,"Me",maplex,active
+leaderboard.maplex.preview.guest,ui,SettingsPage,BackendSection,preview_guest,"Guest",maplex,active
+leaderboard.maplex.preview.custom,ui,SettingsPage,BackendSection,preview_custom,"User id",maplex,active
+leaderboard.maplex.preview.custom_placeholder,ui,SettingsPage,BackendSection,preview_custom_placeholder,"User id (uuid), Enter to apply",maplex,active
+leaderboard.maplex.hint.linked,ui,SettingsPage,BackendSection,hint_linked,"Your linked official account is highlighted.",maplex,active
+leaderboard.maplex.hint.merged,ui,SettingsPage,BackendSection,hint_merged,"Your Maplex totals are inserted locally as a preview.",maplex,active
+leaderboard.maplex.hint.link_cta,ui,SettingsPage,BackendSection,hint_link_cta,"Upload to the official board",maplex,active

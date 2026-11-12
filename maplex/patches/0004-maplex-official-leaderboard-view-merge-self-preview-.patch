@@ -541,7 +541,7 @@ index 0000000000000000000000000000000000000000..9ab87537668229373fb8f04c75f8b3c9
 +  return data;
 +}
 diff --git a/dashboard/src/pages/LeaderboardPage.jsx b/dashboard/src/pages/LeaderboardPage.jsx
-index ab37bc754740acca9c1136d77b17e83e5d74e9bc..a3ffaef701940c816eb772efd6ebdca73010d450 100644
+index 53b215284b91fb2e2076ca6abc262e6d48e4c7ad..1aa1217aaaf2b618344f8c61ed2fb000dc21c648 100644
 --- a/dashboard/src/pages/LeaderboardPage.jsx
 +++ b/dashboard/src/pages/LeaderboardPage.jsx
 @@ -70,6 +70,9 @@ import { LeaderboardTableScroll } from "../components/LeaderboardTableScroll.jsx

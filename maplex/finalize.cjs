@@ -38,7 +38,37 @@ let failures = 0;
   }
 }
 
-// ── 2. Safety net ──
+// ── 2. maplex UI copy (kept out of the patches: upstream appends to these
+// files every release, so a patch hunk at their end conflicts every time) ──
+{
+  const dir = path.join(__dirname, "copy");
+  const csvPath = path.join(root, "dashboard/src/content/copy.csv");
+  let csv = fs.readFileSync(csvPath, "utf8");
+  const have = new Set(csv.split("\n").map((l) => l.split(",")[0]));
+  const rows = fs.readFileSync(path.join(dir, "copy.csv.rows"), "utf8").split("\n").filter(Boolean);
+  const add = [];
+  for (const row of rows) {
+    const key = row.split(",")[0];
+    if (!have.has(key)) add.push(row);
+    else if (!csv.includes(`\n${row}\n`) && !csv.endsWith(`\n${row}`)) {
+      console.error(`✗ copy.csv: upstream now defines maplex key ${key}`); failures++;
+    }
+  }
+  if (add.length) fs.writeFileSync(csvPath, csv.replace(/\n*$/, "\n") + add.join("\n") + "\n");
+  for (const locale of ["zh", "zh-TW"]) {
+    const p = path.join(root, `dashboard/src/content/i18n/${locale}/core.json`);
+    const json = JSON.parse(fs.readFileSync(p, "utf8"));
+    const extra = JSON.parse(fs.readFileSync(path.join(dir, `${locale}.json`), "utf8"));
+    for (const [k, v] of Object.entries(extra)) {
+      if (k in json && json[k] !== v) { console.error(`✗ ${locale}/core.json: upstream now defines ${k}`); failures++; }
+      json[k] = v;
+    }
+    fs.writeFileSync(p, JSON.stringify(json, null, 2) + "\n");
+  }
+  console.log(`✓ maplex copy: ${add.length} row(s) added`);
+}
+
+// ── 3. Safety net ──
 const shipped = ["src", "bin", "dashboard/src", "TokenTrackerBar/TokenTrackerBar", "TokenTrackerWin",
   "TokenTrackerLinux/src", "TokenTrackerLinux/src-tauri/src"];
 const skipDirs = ["node_modules", "__tests__", "tests", "test", "dist", "bin", "obj", "target", "publish"];
