@@ -51,6 +51,20 @@ Maplex devices ──ingest──▶ insforge.maplex.top ──(sum over devices
 - **User switches:** the user can pause the relay (`set_enabled`), trigger it (`relay_now`) or unlink at any time.
 - **Testing:** set the function secrets `MAPLEX_BRIDGE_TARGET_FUNCTIONS`, `MAPLEX_BRIDGE_TARGET_ANON` and `MAPLEX_BRIDGE_TARGET_DASHBOARD` to point the bridge at another TokenTracker instance (for example this one). Delete them afterwards: `DELETE FROM system.secrets WHERE key LIKE 'MAPLEX_BRIDGE_TARGET%'`.
 
-## Dashboard (tokentracker.maplex.top)
+## Automatic deploy (web dashboard + upstream functions)
 
-Use the `TokenTracker-maplex-web-*.tar.gz` asset from a release. If there is none, build the dashboard as described in the top-level README. Then unpack it into `/opt/1panel/www/sites/tokentracker.maplex.top/index/`.
+`release.yml` ends with a `deploy-server` job (`.github/workflows/deploy-server.yml`). After a release is published, it:
+
+1. Builds the dashboard and the upstream edge functions from the same upstream tag and maplex patches as the clients.
+2. Sends one bundle over SSH to `ci-deploy/deploy.py` on the server. The SSH key is pinned to that script in `authorized_keys` (`command=…,restrict`), so it can only run `state` and `deploy <version>`, never a shell. The InsForge admin key stays on the server.
+3. `deploy.py` uploads only the functions whose code changed, backing up the old code to `/root/.maplex-deploy/fn-backup/<version>/`. It then swaps the web root, keeping the previous copy in `/root/.maplex-deploy/web-prev.tgz`. It refuses to deploy an older version.
+
+**Upstream SQL is never applied automatically.** If any upstream SQL changed between the last reviewed version and the new one, the job fails before deploying anything; the job summary lists the files. To unblock:
+
+```sh
+# review the listed files, apply what fits the self-hosted DB (back up the replaced functions first), then:
+python3 /root/.maplex-deploy/deploy.py mark-sql-reviewed X.Y.Z      # as root on the server
+gh workflow run deploy-server.yml --repo FxRayHughes/TokenTracker --ref maplex -f version=X.Y.Z
+```
+
+Secrets: `MAPLEX_DEPLOY_HOST`, `MAPLEX_DEPLOY_SSH_KEY` (the restricted key), `MAPLEX_DEPLOY_KNOWN_HOSTS`. To update `deploy.py`, copy it to `/root/.maplex-deploy/deploy.py` by hand.

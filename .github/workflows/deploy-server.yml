@@ -1,0 +1,150 @@
+name: deploy server (tokentracker.maplex.top + InsForge functions)
+
+# Runs after release.yml publishes (and by hand to redeploy / after an SQL
+# review). Builds the web dashboard and the upstream edge functions from the
+# same upstream tag + maplex patches as the clients, then hands one bundle to
+# the server over a forced-command SSH key (maplex/server/ci-deploy/deploy.py):
+# the key can only run `state` / `deploy`, and the InsForge admin key never
+# leaves the server.
+#
+# Database: upstream SQL is NEVER applied from here. If any upstream SQL changed
+# since the last reviewed version, this job stops before deploying anything
+# (new functions may depend on the new SQL). Review + apply it by hand, run
+#   python3 /root/.maplex-deploy/deploy.py mark-sql-reviewed <version>
+# on the server, then re-run this workflow.
+#
+# Secrets: MAPLEX_DEPLOY_HOST, MAPLEX_DEPLOY_SSH_KEY, MAPLEX_DEPLOY_KNOWN_HOSTS.
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    secrets:
+      MAPLEX_DEPLOY_HOST:
+        required: true
+      MAPLEX_DEPLOY_SSH_KEY:
+        required: true
+      MAPLEX_DEPLOY_KNOWN_HOSTS:
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Released version to deploy (X.Y.Z or X.Y.Z.N)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve version and set up SSH
+        id: ver
+        env:
+          VERSION: ${{ inputs.version }}
+          HOST: ${{ secrets.MAPLEX_DEPLOY_HOST }}
+          KEY: ${{ secrets.MAPLEX_DEPLOY_SSH_KEY }}
+          KNOWN: ${{ secrets.MAPLEX_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[1-9][0-9]*)?$ ]]; then
+            echo "::error::Invalid version: $VERSION"; exit 1
+          fi
+          echo "upstream=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          [ -n "$HOST" ] && [ -n "$KEY" ] && [ -n "$KNOWN" ] || { echo "::error::Deploy secrets are not set"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          printf 'Host deploy\n  HostName %s\n  User root\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  BatchMode yes\n  StrictHostKeyChecking yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Read server state
+        id: state
+        run: |
+          set -euo pipefail
+          state=$(ssh deploy state)
+          echo "$state"
+          echo "reviewed=$(jq -r '.sql_reviewed // empty' <<<"$state")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        with:
+          repository: xiufengsun/TokenTracker
+          ref: refs/tags/v${{ steps.ver.outputs.upstream }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        with:
+          path: _maplex
+          persist-credentials: false
+
+      - name: Stop if upstream SQL changed since the last review
+        env:
+          REVIEWED: ${{ steps.state.outputs.reviewed }}
+          UPSTREAM: ${{ steps.ver.outputs.upstream }}
+        run: |
+          set -euo pipefail
+          [ -n "$REVIEWED" ] || { echo "::error::Server has no sql_reviewed version; run mark-sql-reviewed on the server first."; exit 1; }
+          base="v${REVIEWED%.*}"; [[ "$REVIEWED" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && base="v$REVIEWED"
+          git rev-parse -q --verify "refs/tags/$base" >/dev/null || { echo "::error::Unknown reviewed tag $base"; exit 1; }
+          changed=$(git diff --name-only "$base" "v$UPSTREAM" -- migrations scripts/self-host scripts/ops ':(glob)**/*.sql' | grep -E '\.sql$|scripts/self-host/(manifest|install)\.cjs$' || true)
+          if [ -n "$changed" ]; then
+            {
+              echo "### Upstream SQL changed since $base — deploy held for review"
+              echo
+              echo '```'; echo "$changed"; echo '```'
+              echo
+              echo "Review and apply by hand, then on the server: \`python3 /root/.maplex-deploy/deploy.py mark-sql-reviewed $UPSTREAM\` and re-run this workflow with version=${{ inputs.version }}."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Upstream SQL changed since $base ($(echo "$changed" | wc -l) file(s)); web + functions NOT deployed. See the job summary."
+            exit 1
+          fi
+          echo "No upstream SQL changes since $base."
+
+      - name: Apply maplex patches
+        env:
+          MAPLEX_RELEASE_VERSION: ${{ inputs.version }}
+        run: bash _maplex/maplex/apply-patches.sh .
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            dashboard/package-lock.json
+
+      - name: Build dashboard and functions
+        env:
+          VITE_INSFORGE_BASE_URL: https://insforge.maplex.top
+          VITE_INSFORGE_ANON_KEY: anon_ccd53a08643fee52b46be47046ce44c69d0cd34b
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --prefix dashboard --no-audit --no-fund
+          npm run dashboard:build
+          grep -rqF "VITE_APP_VERSION:\"${{ inputs.version }}\"" dashboard/dist/assets || { echo "::error::dashboard build is not version ${{ inputs.version }}"; exit 1; }
+          node _maplex/maplex/server/build-upstream-functions.cjs . "$RUNNER_TEMP/bundle/fns"
+          cp -r dashboard/dist "$RUNNER_TEMP/bundle/web"
+          tar -czf "$RUNNER_TEMP/bundle.tgz" -C "$RUNNER_TEMP/bundle" web fns
+          ls -la "$RUNNER_TEMP/bundle.tgz"
+
+      - name: Deploy
+        run: ssh deploy deploy "${{ inputs.version }}" < "$RUNNER_TEMP/bundle.tgz"
+
+      - name: Verify live site
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            html=$(curl -fsS -m 20 "https://tokentracker.maplex.top/?v=$GITHUB_RUN_ID") && break; sleep 10
+          done
+          js=$(grep -oE '/assets/[^"]+\.js' <<<"$html" | head -1)
+          curl -fsS -m 30 "https://tokentracker.maplex.top$js" -o /dev/null
+          curl -fsS -m 30 -o /dev/null "https://insforge.maplex.top/functions/tokentracker-leaderboard?period=week"
+          echo "Deployed ${{ inputs.version }} to tokentracker.maplex.top and insforge.maplex.top" >> "$GITHUB_STEP_SUMMARY"
