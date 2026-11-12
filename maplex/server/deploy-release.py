@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
-"""maplex server-side deploy receiver (installed at /root/.maplex-deploy/deploy.py).
+"""Deploy a released maplex build's web dashboard + upstream edge functions.
 
-The CI deploy key is pinned to this script in authorized_keys:
+Lives on the server at /root/.maplex-deploy/deploy.py (copy it there by hand
+after changing it). Run as root over the normal admin SSH; the InsForge admin
+key is read from InsForge's .env on the server and never leaves it.
 
-  command="/usr/bin/python3 /root/.maplex-deploy/deploy.py",restrict ssh-ed25519 AAAA... maplex-ci-deploy
-
-so a leaked key can only run the commands below, never a shell. The InsForge
-admin key never leaves this server: it is read from InsForge's .env here.
-
-  ssh <host> state                 -> JSON state (deployed version, sql_reviewed)
-  ssh <host> deploy X.Y.Z[.N] < bundle.tar.gz
+  python3 deploy.py state                       -> JSON state (deployed, sql_reviewed)
+  python3 deploy.py deploy X.Y.Z[.N] < bundle.tar.gz
         bundle: web/ (dashboard dist) + fns/ (functions.json + *.js from
-        build-upstream-functions.cjs). Replaces the web root (previous copy kept
-        in web-prev.tgz) and uploads only functions whose code changed (old code
-        kept in fn-backup/<version>/).
+        build-upstream-functions.cjs). Uploads only functions whose code
+        changed (old code kept in fn-backup/<version>/), then swaps the web
+        root (previous copy kept in web-prev.tgz). Refuses downgrades.
+  python3 deploy.py mark-sql-reviewed X.Y.Z     -> after reviewing/applying upstream SQL
 
-Run directly as root (not through the CI key):
-  python3 /root/.maplex-deploy/deploy.py mark-sql-reviewed X.Y.Z
-        after reviewing and applying upstream SQL by hand.
+Upstream SQL is never applied by this script.
 """
 import io, json, os, re, shutil, subprocess, sys, tarfile, tempfile, time, urllib.request, urllib.error
 
@@ -167,20 +163,19 @@ def cmd_deploy(version):
 
 def main():
     os.makedirs(HOME, mode=0o700, exist_ok=True)
-    via_ci = "SSH_ORIGINAL_COMMAND" in os.environ
-    args = (os.environ.get("SSH_ORIGINAL_COMMAND") or "").split() if via_ci else sys.argv[1:]
+    args = sys.argv[1:]
     if args == ["state"]:
         print(json.dumps(load_state()))
     elif len(args) == 2 and args[0] == "deploy":
         cmd_deploy(args[1])
-    elif len(args) == 2 and args[0] == "mark-sql-reviewed" and not via_ci:
+    elif len(args) == 2 and args[0] == "mark-sql-reviewed":
         vtuple(args[1])
         state = load_state()
         state["sql_reviewed"] = args[1]
         save_state(state)
         print("✓ sql_reviewed = " + args[1])
     else:
-        die("usage: state | deploy <version>   (mark-sql-reviewed <version>: root shell only)")
+        die("usage: state | deploy <version> | mark-sql-reviewed <version>")
 
 
 if __name__ == "__main__":

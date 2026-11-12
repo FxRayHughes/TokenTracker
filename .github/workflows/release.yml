@@ -699,14 +699,3 @@ jobs:
           set -euo pipefail
           tag="v$VERSION"
           gh release edit "$tag" --draft=false --latest --repo "$GITHUB_REPOSITORY"
-
-  # maplex: once the clients are live, bring the web dashboard and the InsForge
-  # functions to the same version (deploy-server.yml). Upstream SQL changes
-  # hold this job for a manual review instead of being applied automatically.
-  deploy-server:
-    needs: publish
-    if: ${{ inputs.publish == true }}
-    uses: ./.github/workflows/deploy-server.yml
-    with:
-      version: ${{ inputs.version }}
-    secrets: inherit
